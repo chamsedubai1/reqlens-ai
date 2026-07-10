@@ -31,13 +31,15 @@ during implementation. Product logic is unchanged.
 | Framework | Next.js (App Router) |
 | Language | TypeScript (avoid `any`) |
 | Styling | Tailwind CSS |
-| Database | Supabase PostgreSQL |
-| Auth | Supabase Auth (email/password) |
+| Database | **Self-hosted PostgreSQL** on the Hostinger VPS (no Supabase) |
+| DB access | Type-safe SQL layer in `/lib/db` (driver/ORM decided in Plan 2 — leaning Drizzle + `pg`) |
+| Migrations | Plain SQL migration files run by a lightweight runner (decided in Plan 2) |
+| Auth | **Custom** email/password: hashed passwords (bcrypt/argon2) + signed session cookie (jose/JWT), all server-side |
 | AI | OpenAI via a provider abstraction (`/lib/ai`) with a keyless mock mode |
 | Validation | zod |
 | Testing | Vitest |
 | CI | GitHub Actions — install, lint, typecheck, test, build (host-agnostic) |
-| Deployment | **Hostinger** (VPS or Node.js hosting) |
+| Deployment | **Hostinger** VPS — Next.js standalone + PM2 + nginx, Postgres on the same host |
 
 ### Deployment target: Hostinger (not Vercel)
 The app requires a Node server (SSR + Server Actions + the AI route handler), so a static export is
@@ -47,13 +49,15 @@ Vercel-specific APIs or adapters are used. `.env` is provisioned on the server; 
 committed and documents every variable. Deploy steps are documented in the README.
 
 ### Keyless-first build
-Neither Supabase nor OpenAI credentials exist yet. The app is built to run and be tested without
-live keys:
+No OpenAI key or provisioned database exists yet. The app is built to run and be tested without
+live services:
 - **OpenAI:** the `/lib/ai` mock implementation activates automatically when `OPENAI_API_KEY` is
   absent, returning schema-conformant reviews so the full flow and CI tests work. Flipping to live
   requires only setting the key.
-- **Supabase:** SQL migrations + RLS policies + seed data are committed so a fresh project can be
-  provisioned by running the migrations. The app reads Supabase URL/keys from env.
+- **PostgreSQL:** SQL migration files + seed data are committed so any Postgres instance (local
+  Docker for dev, Hostinger VPS for prod) is provisioned by running the migrations. The app reads a
+  `DATABASE_URL` connection string from env. The pure-logic modules (`/lib/rbac`, `/lib/scoring`,
+  `/lib/kpi`, `/lib/validation`) require no database and are fully unit-tested in CI (Plan 1).
 
 ---
 
@@ -67,14 +71,14 @@ live keys:
   /api/reviews      the single AI route handler (long-running; loading state)
 /components         small presentational components + client islands (score ring, charts)
 /lib
-  /db               tenant-scoped data-access layer — the ONLY module that talks to Supabase
-  /auth             session retrieval, profile + tenant_id derivation
+  /db               tenant-scoped data-access layer — the ONLY module that talks to Postgres
+  /auth             password hashing, session cookie issue/verify, profile + tenant_id derivation
   /rbac             permission matrix + can(role, action) helper
   /ai               provider interface, openai impl, deterministic mock impl, prompt builder
   /scoring          score model, readiness status mapping, AI-JSON validation
   /kpi              KPI + AI Dependency Index + quality-trend calculations
   /validation       zod input schemas (story, project, domain, document)
-/supabase           migrations (schema + RLS), seed
+/db                 SQL migration files + seed (run against the Postgres instance)
 /tests              vitest suites
 ```
 
@@ -94,19 +98,21 @@ Uses the eight tables from the functional spec's DATA_MODEL verbatim:
 - `story_reviews` keeps the **7 per-category score columns** (role_clarity, business_value,
   functional_clarity, acceptance_criteria, invest, edge_case, testability) plus domain_alignment —
   matching the canonical scoring model (§7).
-- **RLS policies** on every tenant-owned table restrict rows to the requesting user's tenant (the
-  hard backstop of the hybrid isolation strategy).
+- Tenant isolation is enforced primarily at the application layer (§5), with optional Postgres RLS
+  as a backstop.
 
 ---
 
-## 5. Tenant Isolation (Decision C — Hybrid)
+## 5. Tenant Isolation (app-layer primary + optional Postgres RLS)
 
-Defense in depth:
-1. **Database RLS** — Postgres policies ensure a query can only ever see its own tenant's rows,
-   even if application code has a bug.
-2. **Application `/lib/db` layer** — the only place that touches Supabase; every function derives
-   `tenant_id` from the authenticated user's profile and scopes queries by it. `tenant_id` is
-   **never** accepted from the frontend.
+With self-hosted Postgres and custom auth, there is no Supabase JWT to drive RLS automatically, so
+the **application `/lib/db` layer** is the primary guarantee:
+1. **Application `/lib/db` layer (primary)** — the only module that touches Postgres. Every function
+   derives `tenant_id` from the authenticated session's profile and scopes every query by it.
+   `tenant_id` is **never** accepted from the frontend. This is covered by data-access tests.
+2. **Optional Postgres RLS backstop** — policies keyed off a per-request `SET LOCAL app.tenant_id`
+   set at the start of each request's transaction. Adds defense in depth without a Supabase JWT.
+   Included if it stays simple in Plan 2; otherwise the app-layer scoping stands alone for the MVP.
 
 A user in Tenant A can never read or write Tenant B's projects, stories, reviews, domains,
 documents, or KPIs.
@@ -115,13 +121,15 @@ documents, or KPIs.
 
 ## 6. Auth & Tenant Onboarding
 
-- Supabase Auth (email/password) for signup, login, logout.
-- On **first signup**, a Postgres trigger (`handle_new_user` on `auth.users`) auto-creates a new
-  `tenant` and inserts the user's `user_profile` with role `TENANT_ADMIN` and status `ACTIVE` (per
-  Phase 3 simplification). A trigger (not app code) is used so the profile is guaranteed to exist
-  the moment the session is available, avoiding a race on first load.
-- Protected routes are gated by middleware plus server-side session verification. The session yields
-  the profile, which yields `tenant_id` and `role` for all downstream authorization and scoping.
+- **Custom email/password auth** (no Supabase). Passwords hashed with bcrypt/argon2; on login the
+  server issues a signed, httpOnly session cookie (jose/JWT) carrying the user id. Signup, login, and
+  logout are server actions / route handlers.
+- On **first signup**, a single server-side database transaction creates the `tenant`, inserts the
+  `user_profile` with role `TENANT_ADMIN` and status `ACTIVE`, stores the password hash, and issues
+  the session — all atomically, so the profile always exists before the first authenticated request.
+- Protected routes are gated by middleware plus server-side session verification. Verifying the
+  cookie yields the user id → profile → `tenant_id` and `role` for all downstream authorization and
+  scoping.
 
 ---
 
@@ -216,21 +224,24 @@ Mock AI mode keeps the review flow runnable in CI without a key.
 
 ---
 
-## 13. Build Order (9 phases, checkpoint at each boundary)
+## 13. Build Order (delivered as a series of plans, each producing working, testable software)
 
-Follows the functional spec's implementation plan, adjusted for Hostinger and keyless-first:
+Adjusted for Hostinger, self-hosted Postgres, and keyless-first. Each plan gets its own
+plan → execute → review cycle.
 
-1. Project setup (Next.js/TS/Tailwind/Supabase client/OpenAI SDK/Vitest, `.env.example`, layout/nav,
-   `output: 'standalone'`).
-2. Supabase data model (8 tables, `tenant_id`, RLS policies, `/lib/db` helpers).
-3. Authentication (signup/login/logout, auto-tenant + TENANT_ADMIN on first signup).
-4. Projects & domains (+ domain reference document paste/upload of `.txt`/`.md`).
-5. Story creation (form, project + domain select, validation, draft save).
-6. AI review (prompt builder, domain retrieval, OpenAI+mock, JSON validation, save, display).
-7. Dashboard & KPIs (cards, My Stories table, charts, `/lib/kpi`).
-8. Testing (the 4 suites above).
-9. CI/CD & docs (GitHub Actions, README with **Hostinger** deploy steps, `.env.example`, secret
-   audit).
+- **Plan 1 — Scaffold + pure business logic (TDD):** Next.js/TS/Tailwind/Vitest boots
+  (`output: 'standalone'`); `/lib` pure modules `validation`, `rbac`, `scoring`, `kpi`. CI green,
+  no external services. *(complete)*
+- **Plan 2 — Postgres data model + tenant-scoped `/lib/db` + custom auth:** SQL migrations for the 8
+  tables (+ optional RLS), a migration runner, `DATABASE_URL` config, `/lib/db`, `/lib/auth`
+  (hashing + session cookies), signup/login/logout, middleware, auto-tenant + TENANT_ADMIN on first
+  signup.
+- **Plan 3 — Projects, domains, documents, story creation:** feature pages + server actions, domain
+  reference document paste/upload of `.txt`/`.md`.
+- **Plan 4 — AI review + workspace UI + dashboard/KPIs:** `/lib/ai` (OpenAI + mock), prompt builder,
+  domain retrieval, JSON validation, save/display; dashboard cards, charts, My Stories table.
+- **Plan 5 — CI/CD + docs:** GitHub Actions, README with **Hostinger** (VPS + Postgres + PM2 +
+  nginx) deploy steps, `.env.example`, secret audit.
 
 ---
 
