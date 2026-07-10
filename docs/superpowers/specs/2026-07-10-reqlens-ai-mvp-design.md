@@ -116,8 +116,10 @@ documents, or KPIs.
 ## 6. Auth & Tenant Onboarding
 
 - Supabase Auth (email/password) for signup, login, logout.
-- On **first signup**, a server action (or Postgres trigger) auto-creates a new `tenant` and inserts
-  the user's `user_profile` with role `TENANT_ADMIN` and status `ACTIVE` (per Phase 3 simplification).
+- On **first signup**, a Postgres trigger (`handle_new_user` on `auth.users`) auto-creates a new
+  `tenant` and inserts the user's `user_profile` with role `TENANT_ADMIN` and status `ACTIVE` (per
+  Phase 3 simplification). A trigger (not app code) is used so the profile is guaranteed to exist
+  the moment the session is available, avoiding a race on first load.
 - Protected routes are gated by middleware plus server-side session verification. The session yields
   the profile, which yields `tenant_id` and `role` for all downstream authorization and scoping.
 
