@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { createTestDb } from "@/lib/db/test-db";
 import { registerUser, authenticateUser } from "@/lib/auth/service";
+import { updateUserStatus, getUserProfileByEmail } from "@/lib/db/queries";
 
 let close: (() => Promise<void>) | undefined;
 afterEach(async () => {
@@ -48,5 +49,14 @@ describe("authenticateUser", () => {
     const t = await createTestDb();
     close = t.close;
     expect(await authenticateUser(t.db, "nobody@x.test", "whatever")).toBeNull();
+  });
+
+  it("rejects a deactivated user even with the correct password", async () => {
+    const t = await createTestDb();
+    close = t.close;
+    const { tenantId } = await registerUser(t.db, signup);
+    const profile = await getUserProfileByEmail(t.db, signup.email);
+    await updateUserStatus(t.db, tenantId, profile!.id, "INACTIVE");
+    expect(await authenticateUser(t.db, signup.email, signup.password)).toBeNull();
   });
 });

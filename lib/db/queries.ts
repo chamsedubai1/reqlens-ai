@@ -81,6 +81,30 @@ export async function updateUserRole(
     .where(and(eq(userProfiles.tenantId, tenantId), eq(userProfiles.id, userId)));
 }
 
+export async function updateUserStatus(
+  db: Db,
+  tenantId: string,
+  userId: string,
+  status: string,
+): Promise<void> {
+  await db
+    .update(userProfiles)
+    .set({ status })
+    .where(and(eq(userProfiles.tenantId, tenantId), eq(userProfiles.id, userId)));
+}
+
+export async function updateUserPassword(
+  db: Db,
+  tenantId: string,
+  userId: string,
+  passwordHash: string,
+): Promise<void> {
+  await db
+    .update(userProfiles)
+    .set({ passwordHash })
+    .where(and(eq(userProfiles.tenantId, tenantId), eq(userProfiles.id, userId)));
+}
+
 // Creates a new tenant and its first user (TENANT_ADMIN) in one transaction.
 // tenant_id is generated server-side; never supplied by the client.
 export async function createUserWithTenant(

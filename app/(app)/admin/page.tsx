@@ -1,7 +1,12 @@
 import { getDb } from "@/lib/db/client";
 import { requireProfile } from "@/lib/auth/guard";
 import { listUsersByTenant } from "@/lib/db/queries";
-import { createTeamMemberAction, updateUserRoleAction } from "@/app/actions/admin";
+import {
+  createTeamMemberAction,
+  updateUserRoleAction,
+  setUserStatusAction,
+  resetUserPasswordAction,
+} from "@/app/actions/admin";
 import { ALL_ROLES, ROLE_LABELS } from "@/lib/admin";
 import { can } from "@/lib/rbac";
 import { Card, PageHeader, Badge, FormError, inputClass, btnPrimary } from "@/components/ui";
@@ -94,6 +99,7 @@ export default async function AdminPage({
                 <th className="px-5 py-3 font-semibold">Status</th>
                 <th className="px-5 py-3 font-semibold">Joined</th>
                 <th className="px-5 py-3 font-semibold">Change role</th>
+                <th className="px-5 py-3 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -125,6 +131,29 @@ export default async function AdminPage({
                         </select>
                         <button type="submit" className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Save</button>
                       </form>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex flex-col gap-2">
+                        <form action={setUserStatusAction}>
+                          <input type="hidden" name="userId" value={u.id} />
+                          <input type="hidden" name="status" value={u.status === "ACTIVE" ? "INACTIVE" : "ACTIVE"} />
+                          <button
+                            type="submit"
+                            className={
+                              u.status === "ACTIVE"
+                                ? "rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+                                : "rounded-lg border border-emerald-200 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+                            }
+                          >
+                            {u.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                          </button>
+                        </form>
+                        <form action={resetUserPasswordAction} className="flex items-center gap-2">
+                          <input type="hidden" name="userId" value={u.id} />
+                          <input name="password" type="password" required minLength={8} placeholder="New temp password" className="w-40 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/10" autoComplete="new-password" />
+                          <button type="submit" className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Reset</button>
+                        </form>
+                      </div>
                     </td>
                   </tr>
                 );

@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { isLastAdminDemotion, isRole, ALL_ROLES } from "@/lib/admin";
+import {
+  isLastAdminDemotion,
+  isLastActiveAdminDeactivation,
+  isRole,
+  ALL_ROLES,
+} from "@/lib/admin";
 
 const users = [
   { id: "a1", role: "TENANT_ADMIN" as const },
@@ -22,6 +27,32 @@ describe("isLastAdminDemotion", () => {
   });
   it("returns false for an unknown user", () => {
     expect(isLastAdminDemotion(users, "nope", "VIEWER")).toBe(false);
+  });
+});
+
+describe("isLastActiveAdminDeactivation", () => {
+  const active = (id: string, role: "TENANT_ADMIN" | "BA_PO") => ({ id, role, status: "ACTIVE" });
+  it("blocks deactivating the only active admin", () => {
+    expect(isLastActiveAdminDeactivation([active("a1", "TENANT_ADMIN"), active("b1", "BA_PO")], "a1")).toBe(true);
+  });
+  it("allows deactivating an admin when another active admin remains", () => {
+    expect(
+      isLastActiveAdminDeactivation(
+        [active("a1", "TENANT_ADMIN"), active("a2", "TENANT_ADMIN")],
+        "a1",
+      ),
+    ).toBe(false);
+  });
+  it("does not count an already-inactive admin as a backup", () => {
+    expect(
+      isLastActiveAdminDeactivation(
+        [active("a1", "TENANT_ADMIN"), { id: "a2", role: "TENANT_ADMIN", status: "INACTIVE" }],
+        "a1",
+      ),
+    ).toBe(true);
+  });
+  it("allows deactivating a non-admin", () => {
+    expect(isLastActiveAdminDeactivation([active("a1", "TENANT_ADMIN"), active("b1", "BA_PO")], "b1")).toBe(false);
   });
 });
 

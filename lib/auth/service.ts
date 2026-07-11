@@ -37,16 +37,16 @@ async function getDummyHash(): Promise<string> {
   return dummyHash;
 }
 
-// Returns the profile on a correct email + password, otherwise null.
+// Returns the profile on a correct email + password for an ACTIVE user, else null.
 export async function authenticateUser(
   db: Db,
   email: string,
   password: string,
 ): Promise<UserProfile | null> {
   const profile = await getUserProfileByEmail(db, email);
-  if (!profile) {
-    // Run a comparison anyway so an unknown email takes the same time as a
-    // known one (prevents user enumeration by response timing).
+  // Deactivated (or unknown) users cannot sign in. Run a comparison anyway so
+  // both paths take the same time (prevents user enumeration by response timing).
+  if (!profile || profile.status !== "ACTIVE") {
     await verifyPassword(password, await getDummyHash());
     return null;
   }

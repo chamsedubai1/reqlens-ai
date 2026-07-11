@@ -32,3 +32,18 @@ export function isLastAdminDemotion(
   const admins = users.filter((u) => u.role === "TENANT_ADMIN").length;
   return admins <= 1;
 }
+
+// True if deactivating `targetId` would leave the tenant with no ACTIVE admin
+// (which would lock the workspace out of admin functions).
+export function isLastActiveAdminDeactivation(
+  users: { id: string; role: Role; status: string }[],
+  targetId: string,
+): boolean {
+  const target = users.find((u) => u.id === targetId);
+  if (!target) return false;
+  if (target.role !== "TENANT_ADMIN" || target.status !== "ACTIVE") return false;
+  const activeAdmins = users.filter(
+    (u) => u.role === "TENANT_ADMIN" && u.status === "ACTIVE",
+  ).length;
+  return activeAdmins <= 1;
+}

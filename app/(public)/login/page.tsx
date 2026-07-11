@@ -135,9 +135,9 @@ export default async function LoginPage({
                   <label htmlFor="password" className="text-sm font-semibold text-slate-700">
                     Password
                   </label>
-                  <a href="#" className="text-sm font-medium text-brand hover:text-brand-dark">
+                  <Link href="/forgot-password" className="text-sm font-medium text-brand hover:text-brand-dark">
                     Forgot password?
-                  </a>
+                  </Link>
                 </div>
                 <PasswordField />
               </div>
