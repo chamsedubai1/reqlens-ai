@@ -32,3 +32,11 @@ const PERMISSIONS: Record<Action, Role[]> = {
 export function can(role: Role, action: Action): boolean {
   return PERMISSIONS[action].includes(role);
 }
+
+// Server-side authorization assertion. Throws Error("FORBIDDEN") when the role
+// may not perform the action. Call this in every mutation before writing.
+export function assertCan(role: Role, action: Action): void {
+  if (!can(role, action)) {
+    throw new Error("FORBIDDEN");
+  }
+}

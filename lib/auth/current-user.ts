@@ -1,10 +1,8 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { getDb } from "@/lib/db/client";
-import { type UserProfile } from "@/lib/db/queries";
+import { getUserProfileById, type UserProfile } from "@/lib/db/queries";
 import { verifySessionToken } from "@/lib/auth/session";
-import { eq } from "drizzle-orm";
-import { userProfiles } from "@/lib/db/schema";
 
 export const SESSION_COOKIE = "reqlens_session";
 
@@ -43,10 +41,5 @@ export async function getCurrentUserId(): Promise<string | null> {
 export async function getCurrentProfile(): Promise<UserProfile | null> {
   const userId = await getCurrentUserId();
   if (!userId) return null;
-  const rows = await getDb()
-    .select()
-    .from(userProfiles)
-    .where(eq(userProfiles.id, userId))
-    .limit(1);
-  return rows[0] ?? null;
+  return (await getUserProfileById(getDb(), userId)) ?? null;
 }
