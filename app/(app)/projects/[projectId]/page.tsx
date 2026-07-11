@@ -5,6 +5,7 @@ import { requireProfile } from "@/lib/auth/guard";
 import { getProject, listStoriesByProject } from "@/lib/db/queries";
 import { Card, PageHeader, Badge, btnPrimary } from "@/components/ui";
 import { FileTextIcon, PlusIcon } from "@/components/icons";
+import { storyRef } from "@/lib/story-ref";
 
 export default async function ProjectDetailPage({
   params,
@@ -41,6 +42,7 @@ export default async function ProjectDetailPage({
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
                   <FileTextIcon className="h-4 w-4" />
                 </span>
+                <span className="w-20 shrink-0 font-mono text-xs font-semibold text-slate-400">{storyRef(s.reference, s.id, project.name)}</span>
                 <span className="flex-1 font-medium text-ink">{s.title}</span>
                 <Badge tone={s.status === "REVIEWED" ? "brand" : "slate"}>{s.status}</Badge>
               </Link>

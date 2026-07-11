@@ -103,13 +103,15 @@ try {
     [randomUUID(), tenantId, domainIds["Payments"], "Transfer Policy", "Transfers above 50,000 require OTP. Daily transfer limit is 200,000.", "PROCESSED", userIds.admin],
   );
 
+  let ref = 0;
   for (const [title, project, domain, owner, first, final, weakAcc, weakEdge, day] of STORIES) {
     const storyId = randomUUID();
     const ownerId = userIds[owner];
+    ref += 1;
     await client.query(
-      `insert into user_stories (id, tenant_id, project_id, domain_id, title, user_role, goal, business_value, description, status, created_by, created_at)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,'REVIEWED',$10,$11)`,
-      [storyId, tenantId, projectIds[project], domainIds[domain], title, "Retail banking customer", `use ${title.toLowerCase()}`, "it is fast and secure", `As a customer, I want to ${title.toLowerCase()}.`, ownerId, daysAgo(day)],
+      `insert into user_stories (id, reference, tenant_id, project_id, domain_id, title, user_role, goal, business_value, description, status, created_by, created_at)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'REVIEWED',$11,$12)`,
+      [storyId, ref, tenantId, projectIds[project], domainIds[domain], title, "Retail banking customer", `use ${title.toLowerCase()}`, "it is fast and secure", `As a customer, I want to ${title.toLowerCase()}.`, ownerId, daysAgo(day)],
     );
     const c = catsFor(final, weakAcc, weakEdge);
     const gap = final - first;

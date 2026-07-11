@@ -8,6 +8,13 @@
       "when": 1783743282035,
       "tag": "0000_old_queen_noir",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783762136479,
+      "tag": "0001_fresh_otto_octavius",
+      "breakpoints": true
     }
   ]
 }

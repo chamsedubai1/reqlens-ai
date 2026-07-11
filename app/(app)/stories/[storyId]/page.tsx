@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db/client";
 import { requireProfile } from "@/lib/auth/guard";
-import { getStory, listReviewsForStory } from "@/lib/db/queries";
+import { getStory, getProject, listReviewsForStory } from "@/lib/db/queries";
+import { storyRef } from "@/lib/story-ref";
 import { submitStoryForReviewAction } from "@/app/actions/review";
 import { ReviewSummary } from "@/components/ReviewSummary";
 import { PermissionGate } from "@/components/PermissionGate";
@@ -31,14 +32,18 @@ export default async function StoryDetailPage({
   const db = getDb();
   const story = await getStory(db, profile.tenantId, storyId);
   if (!story) notFound();
-  const reviews = await listReviewsForStory(db, profile.tenantId, storyId);
+  const [project, reviews] = await Promise.all([
+    getProject(db, profile.tenantId, story.projectId),
+    listReviewsForStory(db, profile.tenantId, storyId),
+  ]);
   const review = reviews[0];
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ink">{story.title}</h1>
+          <div className="font-mono text-xs font-semibold text-slate-400">{storyRef(story.reference, story.id, project?.name)}</div>
+          <h1 className="mt-1 text-2xl font-bold text-ink">{story.title}</h1>
           <div className="mt-2">
             <Badge tone={story.status === "REVIEWED" ? "brand" : "slate"}>{story.status}</Badge>
           </div>

@@ -8,6 +8,7 @@ import {
 } from "@/lib/analytics";
 import { readinessStatus } from "@/lib/scoring";
 import { can } from "@/lib/rbac";
+import { storyRef } from "@/lib/story-ref";
 import { Card, Badge, readinessTone } from "@/components/ui";
 import { clsx } from "@/lib/cx";
 import { Donut, LineTrend, GroupedBars, heatColor } from "@/components/charts";
@@ -194,6 +195,7 @@ export default async function DashboardPage() {
                 <table className="w-full text-left text-sm">
                   <thead className="border-b border-slate-100 bg-slate-50/60 text-xs uppercase tracking-wide text-slate-500">
                     <tr>
+                      <th className="px-4 py-3 font-semibold">Ref</th>
                       <th className="px-4 py-3 font-semibold">Story</th>
                       <th className="px-4 py-3 font-semibold">Project</th>
                       <th className="px-4 py-3 font-semibold">Domain</th>
@@ -211,6 +213,7 @@ export default async function DashboardPage() {
                       const status = readinessStatus(r.finalScore);
                       return (
                         <tr key={r.storyId} className="border-b border-slate-50 transition last:border-0 hover:bg-slate-50/60">
+                          <td className="px-4 py-3"><Link href={`/stories/${r.storyId}`} className="font-mono text-xs font-semibold text-slate-500 hover:text-brand">{storyRef(r.reference, r.storyId, r.projectName)}</Link></td>
                           <td className="px-4 py-3"><Link href={`/stories/${r.storyId}`} className="font-medium text-brand hover:text-brand-dark">{r.storyTitle}</Link></td>
                           <td className="px-4 py-3 text-slate-600">{r.projectName}</td>
                           <td className="px-4 py-3 text-slate-600">{r.domainName}</td>

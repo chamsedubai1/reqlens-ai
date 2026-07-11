@@ -3,6 +3,7 @@ import { SCORE_WEIGHTS } from "@/lib/scoring";
 // One latest-review-per-story record, joined with story/project/owner context.
 export type AnalyticsRow = {
   storyId: string;
+  reference: number | null;
   storyTitle: string;
   storyStatus: string;
   projectId: string;
@@ -181,6 +182,7 @@ export function weaknessHeatmap(rows: AnalyticsRow[]): Heatmap {
 
 export type DrillItem = {
   storyId: string;
+  reference: number | null;
   storyTitle: string;
   projectName: string;
   ownerName: string;
@@ -208,7 +210,7 @@ const CAT_LABEL: Record<string, string> = {
 };
 
 function toItem(r: AnalyticsRow, metric: string): DrillItem {
-  return { storyId: r.storyId, storyTitle: r.storyTitle, projectName: r.projectName, ownerName: r.ownerName, metric };
+  return { storyId: r.storyId, reference: r.reference, storyTitle: r.storyTitle, projectName: r.projectName, ownerName: r.ownerName, metric };
 }
 function sortBy(rows: AnalyticsRow[], f: (r: AnalyticsRow) => number, dir: "asc" | "desc" = "asc"): AnalyticsRow[] {
   return [...rows].sort((a, b) => (dir === "asc" ? f(a) - f(b) : f(b) - f(a)));

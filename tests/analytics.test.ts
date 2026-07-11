@@ -14,6 +14,7 @@ import {
 function row(over: Partial<AnalyticsRow>): AnalyticsRow {
   return {
     storyId: "s",
+    reference: 1,
     storyTitle: "S",
     storyStatus: "REVIEWED",
     projectId: "p1",

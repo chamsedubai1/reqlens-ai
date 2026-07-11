@@ -82,6 +82,8 @@ export const domainDocuments = pgTable("domain_documents", {
 
 export const userStories = pgTable("user_stories", {
   id: uuid("id").primaryKey().defaultRandom(),
+  // Human-readable per-tenant sequential reference (shown as STORY-<reference>).
+  reference: integer("reference"),
   tenantId: uuid("tenant_id")
     .notNull()
     .references(() => tenants.id),

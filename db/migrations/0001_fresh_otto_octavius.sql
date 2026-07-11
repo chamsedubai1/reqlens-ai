@@ -1,0 +1,1 @@
+ALTER TABLE "user_stories" ADD COLUMN "reference" integer;

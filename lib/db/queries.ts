@@ -1,4 +1,4 @@
-import { and, eq, asc, desc } from "drizzle-orm";
+import { and, eq, asc, desc, max } from "drizzle-orm";
 import type { Db } from "@/lib/db/client";
 import type { AnalyticsRow } from "@/lib/analytics";
 import {
@@ -181,6 +181,7 @@ export async function listReviewAnalytics(
   const rows = await db
     .select({
       storyId: storyReviews.storyId,
+      reference: userStories.reference,
       storyTitle: userStories.title,
       storyStatus: userStories.status,
       projectId: projects.id,
@@ -215,6 +216,7 @@ export async function listReviewAnalytics(
 
   return rows.map((r) => ({
     storyId: r.storyId,
+    reference: r.reference,
     storyTitle: r.storyTitle,
     storyStatus: r.storyStatus,
     projectId: r.projectId,
@@ -363,9 +365,16 @@ export async function createStory(
     throw new Error("Business domain does not belong to this tenant");
   }
 
+  // Next per-tenant sequential reference (shown as STORY-<n>).
+  const [{ maxRef }] = await db
+    .select({ maxRef: max(userStories.reference) })
+    .from(userStories)
+    .where(eq(userStories.tenantId, tenantId));
+  const reference = (maxRef ?? 0) + 1;
+
   const [row] = await db
     .insert(userStories)
-    .values({ tenantId, createdBy, ...input })
+    .values({ tenantId, createdBy, reference, ...input })
     .returning();
   return row;
 }

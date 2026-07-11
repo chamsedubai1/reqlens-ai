@@ -11,6 +11,7 @@ import {
 } from "@/lib/analytics";
 import { Card } from "@/components/ui";
 import { Sparkline } from "@/components/charts";
+import { storyRef } from "@/lib/story-ref";
 import { clsx } from "@/lib/cx";
 import {
   FileTextIcon, StarIcon, CheckCircleIcon, GaugeIcon, TargetIcon,
@@ -114,7 +115,10 @@ export function DashboardKpis({ rows }: { rows: AnalyticsRow[] }) {
                   <tbody>
                     {drill.items.map((it) => (
                       <tr key={it.storyId} className="border-t border-slate-50 hover:bg-slate-50/60">
-                        <td className="px-3 py-2"><Link href={`/stories/${it.storyId}`} className="font-medium text-brand hover:text-brand-dark">{it.storyTitle}</Link></td>
+                        <td className="px-3 py-2">
+                          <Link href={`/stories/${it.storyId}`} className="font-medium text-brand hover:text-brand-dark">{it.storyTitle}</Link>
+                          <div className="font-mono text-[11px] text-slate-400">{storyRef(it.reference, it.storyId, it.projectName)}</div>
+                        </td>
                         <td className="px-3 py-2 text-slate-600">{it.projectName}</td>
                         <td className="px-3 py-2 text-slate-600">{it.ownerName}</td>
                         <td className="px-3 py-2 text-right font-semibold text-slate-800">{it.metric}</td>
