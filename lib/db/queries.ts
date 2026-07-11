@@ -6,6 +6,7 @@ import {
   projects,
   businessDomains,
   userStories,
+  domainDocuments,
 } from "@/lib/db/schema";
 
 export type UserProfile = typeof userProfiles.$inferSelect;
@@ -169,6 +170,140 @@ export async function listStoriesByUser(
       and(
         eq(userStories.tenantId, tenantId),
         eq(userStories.createdBy, userId),
+      ),
+    );
+}
+
+export type DomainDocument = typeof domainDocuments.$inferSelect;
+
+export async function getProject(
+  db: Db,
+  tenantId: string,
+  id: string,
+): Promise<Project | undefined> {
+  const rows = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.id, id), eq(projects.tenantId, tenantId)))
+    .limit(1);
+  return rows[0];
+}
+
+export async function getDomain(
+  db: Db,
+  tenantId: string,
+  id: string,
+): Promise<BusinessDomain | undefined> {
+  const rows = await db
+    .select()
+    .from(businessDomains)
+    .where(and(eq(businessDomains.id, id), eq(businessDomains.tenantId, tenantId)))
+    .limit(1);
+  return rows[0];
+}
+
+export async function getStory(
+  db: Db,
+  tenantId: string,
+  id: string,
+): Promise<UserStory | undefined> {
+  const rows = await db
+    .select()
+    .from(userStories)
+    .where(and(eq(userStories.id, id), eq(userStories.tenantId, tenantId)))
+    .limit(1);
+  return rows[0];
+}
+
+export async function listStoriesByProject(
+  db: Db,
+  tenantId: string,
+  projectId: string,
+): Promise<UserStory[]> {
+  return db
+    .select()
+    .from(userStories)
+    .where(
+      and(
+        eq(userStories.tenantId, tenantId),
+        eq(userStories.projectId, projectId),
+      ),
+    );
+}
+
+export type DocumentRow = {
+  domainId: string;
+  title: string;
+  contentText: string;
+  fileName?: string;
+  fileType?: string;
+};
+
+export async function createDocument(
+  db: Db,
+  tenantId: string,
+  uploadedBy: string,
+  input: DocumentRow,
+): Promise<DomainDocument> {
+  // Verify the domain belongs to this tenant before attaching a document.
+  const domain = await db
+    .select({ id: businessDomains.id })
+    .from(businessDomains)
+    .where(
+      and(
+        eq(businessDomains.id, input.domainId),
+        eq(businessDomains.tenantId, tenantId),
+      ),
+    )
+    .limit(1);
+  if (domain.length === 0) {
+    throw new Error("Business domain does not belong to this tenant");
+  }
+  const [row] = await db
+    .insert(domainDocuments)
+    .values({
+      tenantId,
+      uploadedBy,
+      domainId: input.domainId,
+      title: input.title,
+      contentText: input.contentText,
+      fileName: input.fileName,
+      fileType: input.fileType,
+      processingStatus: "PROCESSED",
+    })
+    .returning();
+  return row;
+}
+
+export async function listDocumentsByDomain(
+  db: Db,
+  tenantId: string,
+  domainId: string,
+): Promise<DomainDocument[]> {
+  return db
+    .select()
+    .from(domainDocuments)
+    .where(
+      and(
+        eq(domainDocuments.tenantId, tenantId),
+        eq(domainDocuments.domainId, domainId),
+      ),
+    );
+}
+
+export async function listProcessedDocumentsByDomain(
+  db: Db,
+  tenantId: string,
+  domainId: string,
+): Promise<DomainDocument[]> {
+  return db
+    .select()
+    .from(domainDocuments)
+    .where(
+      and(
+        eq(domainDocuments.tenantId, tenantId),
+        eq(domainDocuments.domainId, domainId),
+        eq(domainDocuments.processingStatus, "PROCESSED"),
       ),
     );
 }
