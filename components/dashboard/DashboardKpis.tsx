@@ -106,6 +106,7 @@ export function DashboardKpis({ rows }: { rows: AnalyticsRow[] }) {
                 <table className="w-full text-left text-sm">
                   <thead className="text-xs uppercase tracking-wide text-slate-400">
                     <tr>
+                      <th className="px-3 py-2 font-semibold">Ref</th>
                       <th className="px-3 py-2 font-semibold">Story</th>
                       <th className="px-3 py-2 font-semibold">Project</th>
                       <th className="px-3 py-2 font-semibold">Owner</th>
@@ -115,9 +116,11 @@ export function DashboardKpis({ rows }: { rows: AnalyticsRow[] }) {
                   <tbody>
                     {drill.items.map((it) => (
                       <tr key={it.storyId} className="border-t border-slate-50 hover:bg-slate-50/60">
+                        <td className="whitespace-nowrap px-3 py-2">
+                          <Link href={`/stories/${it.storyId}`} className="font-mono text-xs font-semibold text-slate-500 hover:text-brand">{storyRef(it.reference, it.storyId, it.projectName)}</Link>
+                        </td>
                         <td className="px-3 py-2">
                           <Link href={`/stories/${it.storyId}`} className="font-medium text-brand hover:text-brand-dark">{it.storyTitle}</Link>
-                          <div className="font-mono text-[11px] text-slate-400">{storyRef(it.reference, it.storyId, it.projectName)}</div>
                         </td>
                         <td className="px-3 py-2 text-slate-600">{it.projectName}</td>
                         <td className="px-3 py-2 text-slate-600">{it.ownerName}</td>
