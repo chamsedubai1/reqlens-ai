@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-# StoryScore AI — Claude Code Build Instructions
+# ReqLens AI — Claude Code Build Instructions
 
 ## 1. Product Summary
 
-Build **StoryScore AI**, a multi-tenant AI-powered web application that helps Business Analysts and Product Owners review, score, and improve agile user stories before sprint planning.
+Build **ReqLens AI**, a multi-tenant AI-powered web application that helps Business Analysts and Product Owners review, score, and improve agile user stories before sprint planning.
 
 The application must allow users to:
 
@@ -28,7 +28,7 @@ This is a course MVP. Do not overbuild enterprise features. Focus on a working d
 
 The goal is to build a functional MVP that proves the following concept:
 
-> StoryScore AI acts as an AI-powered quality gate for agile user stories. It scores stories, proposes improvements, and helps Business Analysts improve their first-submission quality over time.
+> ReqLens AI acts as an AI-powered quality gate for agile user stories. It scores stories, proposes improvements, and helps Business Analysts improve their first-submission quality over time.
 
 The MVP must be deployable to Vercel and use a public GitHub repository.
 
@@ -166,7 +166,7 @@ A user from Tenant A must never access:
 1. `/`
 
    * Landing page
-   * Explain StoryScore AI
+   * Explain ReqLens AI
    * CTA to sign up or log in
 
 2. `/login`
