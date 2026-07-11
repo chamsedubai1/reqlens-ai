@@ -46,3 +46,42 @@ export const ShieldCheckIcon = (p: IconProps) => (
 export const SparklesIcon = (p: IconProps) => (
   <Svg {...p}><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3z" /><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z" /></Svg>
 );
+export const UserIcon = (p: IconProps) => (
+  <Svg {...p}><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 4-6 8-6s8 2 8 6" /></Svg>
+);
+export const BuildingIcon = (p: IconProps) => (
+  <Svg {...p}><rect x="5" y="3" width="14" height="18" rx="1.5" /><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2" /></Svg>
+);
+export const HomeIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M4 11l8-7 8 7" /><path d="M6 10v9h12v-9" /></Svg>
+);
+export const FolderIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></Svg>
+);
+export const FileTextIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M7 3h7l4 4v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" /><path d="M14 3v4h4" /><path d="M9 12h6M9 16h6" /></Svg>
+);
+export const LayersIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M12 3l9 5-9 5-9-5 9-5z" /><path d="M3 13l9 5 9-5" /></Svg>
+);
+export const PlusIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M12 5v14M5 12h14" /></Svg>
+);
+export const LogOutIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M15 4h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3" /><path d="M10 17l-5-5 5-5" /><path d="M5 12h11" /></Svg>
+);
+export const TargetIcon = (p: IconProps) => (
+  <Svg {...p}><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="4" /><circle cx="12" cy="12" r="1" /></Svg>
+);
+export const CheckCircleIcon = (p: IconProps) => (
+  <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="M8 12l3 3 5-6" /></Svg>
+);
+export const ChevronRightIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M9 6l6 6-6 6" /></Svg>
+);
+export const GaugeIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M4 18a8 8 0 1 1 16 0" /><path d="M12 18l4-5" /></Svg>
+);
+export const StarIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M12 3l2.6 5.6L21 9.5l-4.5 4.3L17.5 21 12 17.8 6.5 21l1-7.2L3 9.5l6.4-.9L12 3z" /></Svg>
+);
