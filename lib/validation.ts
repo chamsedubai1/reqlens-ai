@@ -41,7 +41,11 @@ export const authSignupSchema = z.object({
   fullName: nonEmpty("Full name"),
   tenantName: nonEmpty("Organization name"),
   email: z.string().trim().email("A valid email is required"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  // Cap at 72 bytes because bcrypt silently ignores input beyond that length.
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(72, "Password must be at most 72 characters"),
 });
 export type AuthSignupInput = z.infer<typeof authSignupSchema>;
 

@@ -1,7 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { getDb } from "@/lib/db/client";
-import { getUserProfileByEmail, type UserProfile } from "@/lib/db/queries";
+import { type UserProfile } from "@/lib/db/queries";
 import { verifySessionToken } from "@/lib/auth/session";
 import { eq } from "drizzle-orm";
 import { userProfiles } from "@/lib/db/schema";
@@ -10,7 +10,9 @@ export const SESSION_COOKIE = "reqlens_session";
 
 export function getSessionSecret(): string {
   const secret = process.env.SESSION_SECRET;
-  if (!secret) throw new Error("SESSION_SECRET is not set");
+  if (!secret || secret.length < 32) {
+    throw new Error("SESSION_SECRET must be set and at least 32 characters");
+  }
   return secret;
 }
 

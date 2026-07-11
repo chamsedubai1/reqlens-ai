@@ -25,7 +25,7 @@ export async function verifySessionToken(
   secret: string,
 ): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, key(secret));
+    const { payload } = await jwtVerify(token, key(secret), { algorithms: [ALG] });
     if (typeof payload.userId !== "string") return null;
     return { userId: payload.userId };
   } catch {

@@ -26,6 +26,17 @@ export async function registerUser(
   });
 }
 
+// A bcrypt hash of a throwaway value, computed once. Used to equalize the
+// timing of the "no such user" path with the "user exists" path so login does
+// not leak which emails are registered.
+let dummyHash: string | null = null;
+async function getDummyHash(): Promise<string> {
+  if (!dummyHash) {
+    dummyHash = await hashPassword("timing-equalizer-placeholder");
+  }
+  return dummyHash;
+}
+
 // Returns the profile on a correct email + password, otherwise null.
 export async function authenticateUser(
   db: Db,
@@ -33,7 +44,12 @@ export async function authenticateUser(
   password: string,
 ): Promise<UserProfile | null> {
   const profile = await getUserProfileByEmail(db, email);
-  if (!profile) return null;
+  if (!profile) {
+    // Run a comparison anyway so an unknown email takes the same time as a
+    // known one (prevents user enumeration by response timing).
+    await verifyPassword(password, await getDummyHash());
+    return null;
+  }
   const ok = await verifyPassword(password, profile.passwordHash);
   return ok ? profile : null;
 }
