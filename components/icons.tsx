@@ -85,3 +85,18 @@ export const GaugeIcon = (p: IconProps) => (
 export const StarIcon = (p: IconProps) => (
   <Svg {...p}><path d="M12 3l2.6 5.6L21 9.5l-4.5 4.3L17.5 21 12 17.8 6.5 21l1-7.2L3 9.5l6.4-.9L12 3z" /></Svg>
 );
+export const ArrowLeftIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M19 12H5" /><path d="M12 19l-7-7 7-7" /></Svg>
+);
+export const AlertTriangleIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M12 3l9 16H3l9-16z" /><path d="M12 10v4" /><path d="M12 17h.01" /></Svg>
+);
+export const LightbulbIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M9 18h6" /><path d="M10 21h4" /><path d="M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.4 1 2.5h6c0-1.1.4-1.9 1-2.5A6 6 0 0 0 12 3z" /></Svg>
+);
+export const BookOpenIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M12 6c-2-1.5-5-1.5-7 0v12c2-1.5 5-1.5 7 0 2-1.5 5-1.5 7 0V6c-2-1.5-5-1.5-7 0z" /><path d="M12 6v12" /></Svg>
+);
+export const InfoIcon = (p: IconProps) => (
+  <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></Svg>
+);

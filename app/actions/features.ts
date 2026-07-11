@@ -15,6 +15,22 @@ import {
   documentInputSchema,
   storyInputSchema,
 } from "@/lib/validation";
+import { reviewAndPersistStory } from "@/lib/review/run";
+
+function parseStory(formData: FormData) {
+  return storyInputSchema.safeParse({
+    projectId: formData.get("projectId"),
+    domainId: formData.get("domainId"),
+    title: formData.get("title"),
+    userRole: formData.get("userRole"),
+    goal: formData.get("goal"),
+    businessValue: formData.get("businessValue"),
+    description: formData.get("description"),
+    acceptanceCriteria: formData.get("acceptanceCriteria") || undefined,
+    businessRules: formData.get("businessRules") || undefined,
+    edgeCases: formData.get("edgeCases") || undefined,
+  });
+}
 
 export async function createProjectAction(formData: FormData): Promise<void> {
   const profile = await requireCan("create_project");
@@ -78,21 +94,32 @@ export async function createDocumentAction(formData: FormData): Promise<void> {
 
 export async function createStoryAction(formData: FormData): Promise<void> {
   const profile = await requireCan("create_story");
-  const parsed = storyInputSchema.safeParse({
-    projectId: formData.get("projectId"),
-    domainId: formData.get("domainId"),
-    title: formData.get("title"),
-    userRole: formData.get("userRole"),
-    goal: formData.get("goal"),
-    businessValue: formData.get("businessValue"),
-    description: formData.get("description"),
-    acceptanceCriteria: formData.get("acceptanceCriteria") || undefined,
-    businessRules: formData.get("businessRules") || undefined,
-    edgeCases: formData.get("edgeCases") || undefined,
-  });
+  const parsed = parseStory(formData);
   if (!parsed.success) {
     redirect("/stories/new?error=" + encodeURIComponent("Please fill in all required fields."));
   }
   const story = await createStory(getDb(), profile.tenantId, profile.id, parsed.data);
+  redirect(`/stories/${story.id}`);
+}
+
+// Save the story and immediately run the AI review, landing on the story with
+// its review already shown. (create_story and submit_review share the same role
+// set, so one permission check covers both.)
+export async function createAndReviewStoryAction(formData: FormData): Promise<void> {
+  const profile = await requireCan("create_story");
+  const parsed = parseStory(formData);
+  if (!parsed.success) {
+    redirect("/stories/new?error=" + encodeURIComponent("Please fill in all required fields."));
+  }
+  const db = getDb();
+  const story = await createStory(db, profile.tenantId, profile.id, parsed.data);
+  try {
+    await reviewAndPersistStory(db, profile.tenantId, profile.id, story.id);
+  } catch {
+    redirect(
+      `/stories/${story.id}?error=` +
+        encodeURIComponent("Story saved, but the AI review could not be completed. Try again from the story page."),
+    );
+  }
   redirect(`/stories/${story.id}`);
 }
