@@ -13,7 +13,9 @@
     "db:migrate": "node --import tsx scripts/migrate.mjs"
   },
   "dependencies": {
+    "bcryptjs": "2.4.3",
     "drizzle-orm": "0.38.3",
+    "jose": "5.9.6",
     "next": "15.1.6",
     "pg": "8.13.1",
     "react": "19.0.0",
@@ -22,6 +24,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.2.14",
+    "@types/bcryptjs": "2.4.6",
     "@types/node": "22.10.5",
     "@types/pg": "8.11.10",
     "@types/react": "19.0.7",
