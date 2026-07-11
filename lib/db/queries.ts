@@ -124,6 +124,32 @@ export async function createStory(
   createdBy: string,
   input: StoryRow,
 ): Promise<UserStory> {
+  // The FK constraints only enforce that the project/domain exist — not that they
+  // belong to this tenant. Verify tenant ownership here so a caller can never attach
+  // a story to another tenant's project or domain (which would later leak that
+  // tenant's domain documents into the AI-review prompt).
+  const project = await db
+    .select({ id: projects.id })
+    .from(projects)
+    .where(and(eq(projects.id, input.projectId), eq(projects.tenantId, tenantId)))
+    .limit(1);
+  if (project.length === 0) {
+    throw new Error("Project does not belong to this tenant");
+  }
+  const domain = await db
+    .select({ id: businessDomains.id })
+    .from(businessDomains)
+    .where(
+      and(
+        eq(businessDomains.id, input.domainId),
+        eq(businessDomains.tenantId, tenantId),
+      ),
+    )
+    .limit(1);
+  if (domain.length === 0) {
+    throw new Error("Business domain does not belong to this tenant");
+  }
+
   const [row] = await db
     .insert(userStories)
     .values({ tenantId, createdBy, ...input })

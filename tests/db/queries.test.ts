@@ -77,5 +77,34 @@ describe("tenant isolation", () => {
     expect(bStories).toHaveLength(0);
     const aStories = await listStoriesByUser(t.db, a.tenantId, a.userId);
     expect(aStories).toHaveLength(1);
+
+    // Tenant predicate must be real: querying tenant B with tenant A's userId must
+    // still return nothing. This would return A's story if the tenantId filter were
+    // dropped, so it guards the tenant dimension (not just the user dimension).
+    const crossTenant = await listStoriesByUser(t.db, b.tenantId, a.userId);
+    expect(crossTenant).toHaveLength(0);
+  });
+
+  it("createStory rejects a project or domain from another tenant", async () => {
+    const t = await createTestDb();
+    close = t.close;
+    const a = await seedTenant(t.db, "alpha");
+    const b = await seedTenant(t.db, "beta");
+
+    const projA = await createProject(t.db, a.tenantId, a.userId, { name: "A" });
+    const domB = await createDomain(t.db, b.tenantId, b.userId, { name: "B-Domain" });
+
+    // Project belongs to A, but the domain belongs to B -> must be rejected.
+    await expect(
+      createStory(t.db, a.tenantId, a.userId, {
+        projectId: projA.id,
+        domainId: domB.id,
+        title: "Cross-tenant story",
+        userRole: "customer",
+        goal: "do things",
+        businessValue: "value",
+        description: "desc",
+      }),
+    ).rejects.toThrow();
   });
 });
