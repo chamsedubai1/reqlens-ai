@@ -7,7 +7,11 @@ export interface StoryReviewRecord {
 
 export type QualityTrend = "Improving" | "Stable" | "Declining";
 
-export function totalStories(records: StoryReviewRecord[]): number {
+// Accepts any array (e.g. all of the user's stories, or just reviewed-story
+// records) — "Total stories created" per CLAUDE.md KPI #1 counts every story,
+// not only the ones that have been reviewed, so this is intentionally wider
+// than StoryReviewRecord[].
+export function totalStories(records: unknown[]): number {
   return records.length;
 }
 
