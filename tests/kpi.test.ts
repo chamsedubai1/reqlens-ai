@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
+import type { StoryReviewRecord } from "@/lib/kpi";
 import {
-  StoryReviewRecord,
   totalStories,
   averageFirstScore,
   averageFinalScore,
@@ -73,6 +73,11 @@ describe("qualityTrend", () => {
     expect(qualityTrend(series([60, 60, 60, 60, 60, 62, 62, 62, 62, 62]))).toBe(
       "Stable",
     );
+  });
+
+  it("returns Stable when there is no previous five-story window (fewer than 6 stories)", () => {
+    expect(qualityTrend(series([50, 55, 60]))).toBe("Stable");
+    expect(qualityTrend([])).toBe("Stable");
   });
 });
 

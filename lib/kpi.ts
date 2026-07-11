@@ -41,6 +41,9 @@ export function qualityTrend(records: StoryReviewRecord[]): QualityTrend {
   const firstScores = ordered.map((r) => r.firstSubmissionScore);
   const latest5 = firstScores.slice(-5);
   const previous5 = firstScores.slice(-10, -5);
+  // No prior five-story window to compare against yet (fewer than 6 stories):
+  // report Stable rather than a spurious "Improving" from comparing against a zero baseline.
+  if (previous5.length === 0) return "Stable";
   const diff = mean(latest5) - mean(previous5);
   if (diff >= 5) return "Improving";
   if (diff <= -5) return "Declining";
