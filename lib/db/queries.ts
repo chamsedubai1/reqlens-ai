@@ -1,5 +1,6 @@
 import { and, eq, asc, desc } from "drizzle-orm";
 import type { Db } from "@/lib/db/client";
+import type { AnalyticsRow } from "@/lib/analytics";
 import {
   tenants,
   userProfiles,
@@ -103,6 +104,67 @@ export async function updateUserPassword(
     .update(userProfiles)
     .set({ passwordHash })
     .where(and(eq(userProfiles.tenantId, tenantId), eq(userProfiles.id, userId)));
+}
+
+// Workspace-wide review analytics (all owners), joined with story/project/owner
+// context. Ordered newest-first so callers can reduce to latest-per-story.
+export async function listReviewAnalytics(
+  db: Db,
+  tenantId: string,
+): Promise<AnalyticsRow[]> {
+  const rows = await db
+    .select({
+      storyId: storyReviews.storyId,
+      storyTitle: userStories.title,
+      storyStatus: userStories.status,
+      projectId: projects.id,
+      projectName: projects.name,
+      domainName: businessDomains.name,
+      ownerName: userProfiles.fullName,
+      firstScore: storyReviews.firstSubmissionScore,
+      finalScore: storyReviews.finalScore,
+      roleClarity: storyReviews.roleClarityScore,
+      businessValue: storyReviews.businessValueScore,
+      functionalClarity: storyReviews.functionalClarityScore,
+      acceptanceCriteria: storyReviews.acceptanceCriteriaScore,
+      invest: storyReviews.investScore,
+      edgeCases: storyReviews.edgeCaseScore,
+      testability: storyReviews.testabilityScore,
+      domainAlignment: storyReviews.domainAlignmentScore,
+      weaknesses: storyReviews.weaknesses,
+      createdAt: storyReviews.createdAt,
+    })
+    .from(storyReviews)
+    .innerJoin(userStories, eq(storyReviews.storyId, userStories.id))
+    .innerJoin(projects, eq(storyReviews.projectId, projects.id))
+    .innerJoin(businessDomains, eq(storyReviews.domainId, businessDomains.id))
+    .innerJoin(userProfiles, eq(storyReviews.userId, userProfiles.id))
+    .where(eq(storyReviews.tenantId, tenantId))
+    .orderBy(desc(storyReviews.createdAt));
+
+  return rows.map((r) => ({
+    storyId: r.storyId,
+    storyTitle: r.storyTitle,
+    storyStatus: r.storyStatus,
+    projectId: r.projectId,
+    projectName: r.projectName,
+    domainName: r.domainName,
+    ownerName: r.ownerName,
+    firstScore: r.firstScore,
+    finalScore: r.finalScore,
+    categories: {
+      roleClarity: r.roleClarity ?? 0,
+      businessValue: r.businessValue ?? 0,
+      functionalClarity: r.functionalClarity ?? 0,
+      acceptanceCriteria: r.acceptanceCriteria ?? 0,
+      invest: r.invest ?? 0,
+      edgeCases: r.edgeCases ?? 0,
+      testability: r.testability ?? 0,
+    },
+    domainAlignment: r.domainAlignment ?? 0,
+    weaknesses: Array.isArray(r.weaknesses) ? (r.weaknesses as string[]) : [],
+    createdAt: r.createdAt.toISOString(),
+  }));
 }
 
 // Creates a new tenant and its first user (TENANT_ADMIN) in one transaction.
