@@ -1,26 +1,12 @@
 import { getDb } from "@/lib/db/client";
 import { requireProfile } from "@/lib/auth/guard";
 import { listUsersByTenant, listAuditLogs } from "@/lib/db/queries";
-import {
-  createTeamMemberAction,
-  updateUserRoleAction,
-  setUserStatusAction,
-  resetUserPasswordAction,
-} from "@/app/actions/admin";
+import { createTeamMemberAction } from "@/app/actions/admin";
 import { ALL_ROLES, ROLE_LABELS } from "@/lib/admin";
 import { can } from "@/lib/rbac";
-import { Card, PageHeader, Badge, FormError, inputClass, btnPrimary } from "@/components/ui";
+import { Card, PageHeader, FormError, inputClass, btnPrimary } from "@/components/ui";
+import { UsersTable, type UserRow } from "@/components/app/UsersTable";
 import { ShieldCheckIcon, UserIcon, MailIcon, CheckCircleIcon } from "@/components/icons";
-
-function roleTone(role: string) {
-  if (role === "TENANT_ADMIN") return "brand";
-  if (role === "VIEWER") return "slate";
-  return "green";
-}
-
-function fmtDate(d: Date) {
-  return new Date(d).toISOString().slice(0, 10);
-}
 
 function fmtDateTime(iso: string) {
   return iso.slice(0, 16).replace("T", " ");
@@ -66,6 +52,16 @@ export default async function AdminPage({
   const users = await listUsersByTenant(db, profile.tenantId);
   const activity = await listAuditLogs(db, profile.tenantId, 25);
 
+  // Map to a safe client shape — never send passwordHash to the browser.
+  const userRows: UserRow[] = users.map((u) => ({
+    id: u.id,
+    fullName: u.fullName,
+    email: u.email,
+    role: u.role,
+    status: u.status,
+    createdAt: u.createdAt.toISOString(),
+  }));
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader title="Admin" subtitle="Manage the people in your workspace and their roles." />
@@ -106,80 +102,8 @@ export default async function AdminPage({
         </p>
       </Card>
 
-      {/* Users table */}
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-100 bg-slate-50/60 text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-5 py-3 font-semibold">Member</th>
-                <th className="px-5 py-3 font-semibold">Role</th>
-                <th className="px-5 py-3 font-semibold">Status</th>
-                <th className="px-5 py-3 font-semibold">Joined</th>
-                <th className="px-5 py-3 font-semibold">Change role</th>
-                <th className="px-5 py-3 font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => {
-                const isSelf = u.id === profile.id;
-                return (
-                  <tr key={u.id} className="border-b border-slate-50 last:border-0">
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
-                          {u.fullName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
-                        </span>
-                        <div>
-                          <div className="font-medium text-ink">
-                            {u.fullName} {isSelf && <span className="text-xs font-normal text-slate-400">(you)</span>}
-                          </div>
-                          <div className="text-xs text-slate-500">{u.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3"><Badge tone={roleTone(u.role)}>{ROLE_LABELS[u.role]}</Badge></td>
-                    <td className="px-5 py-3"><Badge tone={u.status === "ACTIVE" ? "green" : "slate"}>{u.status}</Badge></td>
-                    <td className="px-5 py-3 text-slate-500">{fmtDate(u.createdAt)}</td>
-                    <td className="px-5 py-3">
-                      <form action={updateUserRoleAction} className="flex items-center gap-2">
-                        <input type="hidden" name="userId" value={u.id} />
-                        <select name="role" defaultValue={u.role} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/10">
-                          {ALL_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
-                        </select>
-                        <button type="submit" className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Save</button>
-                      </form>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex flex-col gap-2">
-                        <form action={setUserStatusAction}>
-                          <input type="hidden" name="userId" value={u.id} />
-                          <input type="hidden" name="status" value={u.status === "ACTIVE" ? "INACTIVE" : "ACTIVE"} />
-                          <button
-                            type="submit"
-                            className={
-                              u.status === "ACTIVE"
-                                ? "rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
-                                : "rounded-lg border border-emerald-200 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
-                            }
-                          >
-                            {u.status === "ACTIVE" ? "Deactivate" : "Activate"}
-                          </button>
-                        </form>
-                        <form action={resetUserPasswordAction} className="flex items-center gap-2">
-                          <input type="hidden" name="userId" value={u.id} />
-                          <input name="password" type="password" required minLength={8} placeholder="New temp password" className="w-40 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/10" autoComplete="new-password" />
-                          <button type="submit" className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Reset</button>
-                        </form>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {/* Users table (sortable + filterable) */}
+      <UsersTable users={userRows} currentUserId={profile.id} />
 
       {/* Recent activity (audit log) */}
       <div>

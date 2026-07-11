@@ -6,13 +6,12 @@ import {
   latestAnalyticsPerStory, dashboardKpis, scoreDistribution,
   byProject, trendSeries, weaknessHeatmap, insights,
 } from "@/lib/analytics";
-import { readinessStatus } from "@/lib/scoring";
 import { can } from "@/lib/rbac";
-import { storyRef } from "@/lib/story-ref";
-import { Card, Badge, readinessTone } from "@/components/ui";
+import { Card, Badge } from "@/components/ui";
 import { clsx } from "@/lib/cx";
 import { Donut, LineTrend, GroupedBars, heatColor } from "@/components/charts";
 import { DashboardKpis } from "@/components/dashboard/DashboardKpis";
+import { StoriesTable } from "@/components/dashboard/StoriesTable";
 import { SparklesIcon, LightbulbIcon } from "@/components/icons";
 
 function Panel({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
@@ -22,11 +21,6 @@ function Panel({ title, children, className }: { title: string; children: React.
       {children}
     </Card>
   );
-}
-
-function scorePill(score: number) {
-  const tone = score >= 80 ? "bg-emerald-50 text-emerald-700" : score >= 65 ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700";
-  return <span className={clsx("inline-flex rounded-md px-2 py-0.5 text-xs font-semibold", tone)}>{score}</span>;
 }
 
 export default async function DashboardPage() {
@@ -190,46 +184,7 @@ export default async function DashboardPage() {
               <h2 className="text-lg font-semibold text-ink">Stories Overview</h2>
               <span className="text-xs text-slate-400">Showing top {storiesTop.length} by latest review</span>
             </div>
-            <Card className="overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="border-b border-slate-100 bg-slate-50/60 text-xs uppercase tracking-wide text-slate-500">
-                    <tr>
-                      <th className="px-4 py-3 font-semibold">Ref</th>
-                      <th className="px-4 py-3 font-semibold">Story</th>
-                      <th className="px-4 py-3 font-semibold">Project</th>
-                      <th className="px-4 py-3 font-semibold">Domain</th>
-                      <th className="px-4 py-3 font-semibold">First</th>
-                      <th className="px-4 py-3 font-semibold">Latest</th>
-                      <th className="px-4 py-3 font-semibold">Improvement</th>
-                      <th className="px-4 py-3 font-semibold">Readiness</th>
-                      <th className="px-4 py-3 font-semibold">Owner</th>
-                      <th className="px-4 py-3 font-semibold">Last Reviewed</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {storiesTop.map((r) => {
-                      const imp = r.finalScore - r.firstScore;
-                      const status = readinessStatus(r.finalScore);
-                      return (
-                        <tr key={r.storyId} className="border-b border-slate-50 transition last:border-0 hover:bg-slate-50/60">
-                          <td className="px-4 py-3"><Link href={`/stories/${r.storyId}`} className="font-mono text-xs font-semibold text-slate-500 hover:text-brand">{storyRef(r.reference, r.storyId, r.projectName)}</Link></td>
-                          <td className="px-4 py-3"><Link href={`/stories/${r.storyId}`} className="font-medium text-brand hover:text-brand-dark">{r.storyTitle}</Link></td>
-                          <td className="px-4 py-3 text-slate-600">{r.projectName}</td>
-                          <td className="px-4 py-3 text-slate-600">{r.domainName}</td>
-                          <td className="px-4 py-3">{scorePill(r.firstScore)}</td>
-                          <td className="px-4 py-3">{scorePill(r.finalScore)}</td>
-                          <td className="px-4 py-3 font-medium text-emerald-600">{imp > 0 ? `↑ ${imp}` : imp}</td>
-                          <td className="px-4 py-3"><Badge tone={readinessTone(status)}>{status}</Badge></td>
-                          <td className="px-4 py-3 text-slate-600">{r.ownerName}</td>
-                          <td className="px-4 py-3 text-slate-500">{r.createdAt.slice(0, 10)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+            <StoriesTable rows={storiesTop} />
           </div>
         </>
       )}

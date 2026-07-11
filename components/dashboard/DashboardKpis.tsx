@@ -4,12 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   type AnalyticsRow,
+  type DrillItem,
   dashboardKpis,
   categoryQuality,
   trendSeries,
   drilldown,
 } from "@/lib/analytics";
 import { Card } from "@/components/ui";
+import { DataTable } from "@/components/DataTable";
 import { Sparkline } from "@/components/charts";
 import { storyRef } from "@/lib/story-ref";
 import { clsx } from "@/lib/cx";
@@ -99,37 +101,20 @@ export function DashboardKpis({ rows }: { rows: AnalyticsRow[] }) {
               </div>
               <button type="button" onClick={() => setOpenKey(null)} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
-            <div className="overflow-auto p-2">
-              {drill.items.length === 0 ? (
-                <p className="p-6 text-center text-slate-500">No stories.</p>
-              ) : (
-                <table className="w-full text-left text-sm">
-                  <thead className="text-xs uppercase tracking-wide text-slate-400">
-                    <tr>
-                      <th className="px-3 py-2 font-semibold">Ref</th>
-                      <th className="px-3 py-2 font-semibold">Story</th>
-                      <th className="px-3 py-2 font-semibold">Project</th>
-                      <th className="px-3 py-2 font-semibold">Owner</th>
-                      <th className="px-3 py-2 text-right font-semibold">{drill.metricLabel}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {drill.items.map((it) => (
-                      <tr key={it.storyId} className="border-t border-slate-50 hover:bg-slate-50/60">
-                        <td className="whitespace-nowrap px-3 py-2">
-                          <Link href={`/stories/${it.storyId}`} className="font-mono text-xs font-semibold text-slate-500 hover:text-brand">{storyRef(it.reference, it.storyId, it.projectName)}</Link>
-                        </td>
-                        <td className="px-3 py-2">
-                          <Link href={`/stories/${it.storyId}`} className="font-medium text-brand hover:text-brand-dark">{it.storyTitle}</Link>
-                        </td>
-                        <td className="px-3 py-2 text-slate-600">{it.projectName}</td>
-                        <td className="px-3 py-2 text-slate-600">{it.ownerName}</td>
-                        <td className="px-3 py-2 text-right font-semibold text-slate-800">{it.metric}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+            <div className="overflow-auto p-4">
+              <DataTable<DrillItem>
+                bare
+                rows={drill.items}
+                getRowKey={(it) => it.storyId}
+                searchPlaceholder="Search stories…"
+                columns={[
+                  { key: "ref", header: "Ref", filterText: (it) => storyRef(it.reference, it.storyId, it.projectName), sortValue: (it) => it.reference ?? 0, className: "whitespace-nowrap", render: (it) => <Link href={`/stories/${it.storyId}`} className="font-mono text-xs font-semibold text-slate-500 hover:text-brand">{storyRef(it.reference, it.storyId, it.projectName)}</Link> },
+                  { key: "story", header: "Story", filterText: (it) => it.storyTitle, render: (it) => <Link href={`/stories/${it.storyId}`} className="font-medium text-brand hover:text-brand-dark">{it.storyTitle}</Link> },
+                  { key: "project", header: "Project", facet: true, filterText: (it) => it.projectName, render: (it) => <span className="text-slate-600">{it.projectName}</span> },
+                  { key: "owner", header: "Owner", facet: true, filterText: (it) => it.ownerName, render: (it) => <span className="text-slate-600">{it.ownerName}</span> },
+                  { key: "metric", header: drill.metricLabel, align: "right", sortValue: (it) => it.metricSort, render: (it) => <span className="font-semibold text-slate-800">{it.metric}</span> },
+                ]}
+              />
             </div>
           </div>
         </div>
