@@ -31,7 +31,7 @@ export default async function AppLayout({
           Workspace
         </div>
         <div className="mt-2">
-          <SidebarNav />
+          <SidebarNav isAdmin={profile.role === "TENANT_ADMIN"} />
         </div>
 
         <div className="mt-auto space-y-2 border-t border-slate-100 pt-4">

@@ -54,3 +54,14 @@ export const authLoginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 export type AuthLoginInput = z.infer<typeof authLoginSchema>;
+
+export const adminCreateUserSchema = z.object({
+  fullName: nonEmpty("Full name"),
+  email: z.string().trim().email("A valid email is required"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(72, "Password must be at most 72 characters"),
+  role: z.enum(["TENANT_ADMIN", "PROJECT_MANAGER", "BA_PO", "VIEWER"]),
+});
+export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;

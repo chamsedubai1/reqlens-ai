@@ -8,6 +8,7 @@ import {
   FolderIcon,
   PlusIcon,
   LayersIcon,
+  ShieldCheckIcon,
 } from "@/components/icons";
 
 const NAV = [
@@ -17,11 +18,14 @@ const NAV = [
   { href: "/domains", label: "Business Domains", Icon: LayersIcon },
 ];
 
-export function SidebarNav() {
+const ADMIN_NAV = { href: "/admin", label: "Admin", Icon: ShieldCheckIcon };
+
+export function SidebarNav({ isAdmin = false }: { isAdmin?: boolean }) {
   const pathname = usePathname();
+  const items = isAdmin ? [...NAV, ADMIN_NAV] : NAV;
   return (
     <nav className="flex flex-col gap-1">
-      {NAV.map(({ href, label, Icon }) => {
+      {items.map(({ href, label, Icon }) => {
         const active =
           href === "/dashboard"
             ? pathname === href

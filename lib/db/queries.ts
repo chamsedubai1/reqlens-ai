@@ -39,6 +39,48 @@ export async function getUserProfileById(
   return rows[0];
 }
 
+// --- Admin: workspace user management (all tenant-scoped) ---
+
+export async function listUsersByTenant(
+  db: Db,
+  tenantId: string,
+): Promise<UserProfile[]> {
+  return db
+    .select()
+    .from(userProfiles)
+    .where(eq(userProfiles.tenantId, tenantId))
+    .orderBy(asc(userProfiles.createdAt));
+}
+
+export async function createUserInTenant(
+  db: Db,
+  tenantId: string,
+  input: {
+    fullName: string;
+    email: string;
+    passwordHash: string;
+    role: UserProfile["role"];
+  },
+): Promise<{ userId: string }> {
+  const [row] = await db
+    .insert(userProfiles)
+    .values({ tenantId, ...input })
+    .returning();
+  return { userId: row.id };
+}
+
+export async function updateUserRole(
+  db: Db,
+  tenantId: string,
+  userId: string,
+  role: UserProfile["role"],
+): Promise<void> {
+  await db
+    .update(userProfiles)
+    .set({ role })
+    .where(and(eq(userProfiles.tenantId, tenantId), eq(userProfiles.id, userId)));
+}
+
 // Creates a new tenant and its first user (TENANT_ADMIN) in one transaction.
 // tenant_id is generated server-side; never supplied by the client.
 export async function createUserWithTenant(
