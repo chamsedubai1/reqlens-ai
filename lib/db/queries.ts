@@ -9,6 +9,7 @@ import {
   userStories,
   domainDocuments,
   storyReviews,
+  auditLogs,
 } from "@/lib/db/schema";
 
 export type UserProfile = typeof userProfiles.$inferSelect;
@@ -106,11 +107,76 @@ export async function updateUserPassword(
     .where(and(eq(userProfiles.tenantId, tenantId), eq(userProfiles.id, userId)));
 }
 
+// --- Audit logs (tenant-scoped) ---
+
+export async function createAuditLog(
+  db: Db,
+  tenantId: string,
+  entry: {
+    userId: string;
+    action: string;
+    entityType: string;
+    entityId?: string | null;
+    metadata?: Record<string, unknown>;
+  },
+): Promise<void> {
+  await db.insert(auditLogs).values({
+    tenantId,
+    userId: entry.userId,
+    action: entry.action,
+    entityType: entry.entityType,
+    entityId: entry.entityId ?? null,
+    metadata: entry.metadata ?? null,
+  });
+}
+
+export type AuditLogEntry = {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  actorName: string | null;
+  metadata: unknown;
+  createdAt: string;
+};
+
+export async function listAuditLogs(
+  db: Db,
+  tenantId: string,
+  limit = 30,
+): Promise<AuditLogEntry[]> {
+  const rows = await db
+    .select({
+      id: auditLogs.id,
+      action: auditLogs.action,
+      entityType: auditLogs.entityType,
+      entityId: auditLogs.entityId,
+      actorName: userProfiles.fullName,
+      metadata: auditLogs.metadata,
+      createdAt: auditLogs.createdAt,
+    })
+    .from(auditLogs)
+    .leftJoin(userProfiles, eq(auditLogs.userId, userProfiles.id))
+    .where(eq(auditLogs.tenantId, tenantId))
+    .orderBy(desc(auditLogs.createdAt))
+    .limit(limit);
+  return rows.map((r) => ({
+    id: r.id,
+    action: r.action,
+    entityType: r.entityType,
+    entityId: r.entityId,
+    actorName: r.actorName,
+    metadata: r.metadata,
+    createdAt: r.createdAt.toISOString(),
+  }));
+}
+
 // Workspace-wide review analytics (all owners), joined with story/project/owner
 // context. Ordered newest-first so callers can reduce to latest-per-story.
 export async function listReviewAnalytics(
   db: Db,
   tenantId: string,
+  userId?: string,
 ): Promise<AnalyticsRow[]> {
   const rows = await db
     .select({
@@ -139,7 +205,12 @@ export async function listReviewAnalytics(
     .innerJoin(projects, eq(storyReviews.projectId, projects.id))
     .innerJoin(businessDomains, eq(storyReviews.domainId, businessDomains.id))
     .innerJoin(userProfiles, eq(storyReviews.userId, userProfiles.id))
-    .where(eq(storyReviews.tenantId, tenantId))
+    .where(
+      and(
+        eq(storyReviews.tenantId, tenantId),
+        userId ? eq(storyReviews.userId, userId) : undefined,
+      ),
+    )
     .orderBy(desc(storyReviews.createdAt));
 
   return rows.map((r) => ({
@@ -524,6 +595,18 @@ export async function getLatestReviewForStory(
     .orderBy(desc(storyReviews.createdAt))
     .limit(1);
   return rows[0];
+}
+
+export async function listReviewsForStory(
+  db: Db,
+  tenantId: string,
+  storyId: string,
+): Promise<StoryReview[]> {
+  return db
+    .select()
+    .from(storyReviews)
+    .where(and(eq(storyReviews.tenantId, tenantId), eq(storyReviews.storyId, storyId)))
+    .orderBy(desc(storyReviews.createdAt));
 }
 
 export async function setStoryStatus(

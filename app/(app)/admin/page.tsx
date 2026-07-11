@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/db/client";
 import { requireProfile } from "@/lib/auth/guard";
-import { listUsersByTenant } from "@/lib/db/queries";
+import { listUsersByTenant, listAuditLogs } from "@/lib/db/queries";
 import {
   createTeamMemberAction,
   updateUserRoleAction,
@@ -21,6 +21,22 @@ function roleTone(role: string) {
 function fmtDate(d: Date) {
   return new Date(d).toISOString().slice(0, 10);
 }
+
+function fmtDateTime(iso: string) {
+  return iso.slice(0, 16).replace("T", " ");
+}
+
+const ACTION_LABELS: Record<string, string> = {
+  "project.created": "created a project",
+  "domain.created": "created a business domain",
+  "document.uploaded": "uploaded a document",
+  "story.created": "created a story",
+  "story.reviewed": "ran an AI review",
+  "user.created": "added a team member",
+  "user.role_updated": "changed a member's role",
+  "user.status_changed": "changed a member's status",
+  "user.password_reset": "reset a member's password",
+};
 
 export default async function AdminPage({
   searchParams,
@@ -46,7 +62,9 @@ export default async function AdminPage({
     );
   }
 
-  const users = await listUsersByTenant(getDb(), profile.tenantId);
+  const db = getDb();
+  const users = await listUsersByTenant(db, profile.tenantId);
+  const activity = await listAuditLogs(db, profile.tenantId, 25);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -162,6 +180,29 @@ export default async function AdminPage({
           </table>
         </div>
       </Card>
+
+      {/* Recent activity (audit log) */}
+      <div>
+        <h2 className="mb-3 text-lg font-semibold text-ink">Recent Activity</h2>
+        {activity.length === 0 ? (
+          <Card className="p-8 text-center text-slate-500">No activity recorded yet.</Card>
+        ) : (
+          <Card className="divide-y divide-slate-50">
+            {activity.map((a) => (
+              <div key={a.id} className="flex items-center gap-3 px-5 py-3 text-sm">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-500">
+                  {(a.actorName ?? "?").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
+                </span>
+                <span className="flex-1">
+                  <span className="font-medium text-ink">{a.actorName ?? "Someone"}</span>{" "}
+                  <span className="text-slate-600">{ACTION_LABELS[a.action] ?? a.action}</span>
+                </span>
+                <span className="text-xs text-slate-400">{fmtDateTime(a.createdAt)}</span>
+              </div>
+            ))}
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

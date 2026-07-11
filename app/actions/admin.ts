@@ -18,6 +18,7 @@ import {
   isLastActiveAdminDeactivation,
   isRole,
 } from "@/lib/admin";
+import { audit } from "@/lib/audit";
 
 export async function createTeamMemberAction(formData: FormData): Promise<void> {
   const profile = await requireCan("manage_tenant");
@@ -37,12 +38,13 @@ export async function createTeamMemberAction(formData: FormData): Promise<void> 
     redirect("/admin?error=" + encodeURIComponent("That email is already registered."));
   }
   const passwordHash = await hashPassword(parsed.data.password);
-  await createUserInTenant(db, profile.tenantId, {
+  const created = await createUserInTenant(db, profile.tenantId, {
     fullName: parsed.data.fullName,
     email: parsed.data.email,
     passwordHash,
     role: parsed.data.role,
   });
+  await audit(profile.tenantId, profile.id, "user.created", "user_profile", created.userId, { email: parsed.data.email, role: parsed.data.role });
   redirect("/admin?ok=" + encodeURIComponent("Team member added."));
 }
 
@@ -60,6 +62,7 @@ export async function updateUserRoleAction(formData: FormData): Promise<void> {
     redirect("/admin?error=" + encodeURIComponent("You can't remove the last admin."));
   }
   await updateUserRole(db, profile.tenantId, userId, role);
+  await audit(profile.tenantId, profile.id, "user.role_updated", "user_profile", userId, { role });
   redirect("/admin?ok=" + encodeURIComponent("Role updated."));
 }
 
@@ -79,6 +82,7 @@ export async function setUserStatusAction(formData: FormData): Promise<void> {
     }
   }
   await updateUserStatus(db, profile.tenantId, userId, status);
+  await audit(profile.tenantId, profile.id, "user.status_changed", "user_profile", userId, { status });
   redirect("/admin?ok=" + encodeURIComponent(status === "ACTIVE" ? "Member reactivated." : "Member deactivated."));
 }
 
@@ -91,5 +95,6 @@ export async function resetUserPasswordAction(formData: FormData): Promise<void>
   }
   const passwordHash = await hashPassword(password);
   await updateUserPassword(getDb(), profile.tenantId, userId, passwordHash);
+  await audit(profile.tenantId, profile.id, "user.password_reset", "user_profile", userId, {});
   redirect("/admin?ok=" + encodeURIComponent("Password reset."));
 }

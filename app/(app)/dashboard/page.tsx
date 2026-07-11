@@ -7,6 +7,7 @@ import {
   byProject, trendSeries, weaknessHeatmap, insights,
 } from "@/lib/analytics";
 import { readinessStatus } from "@/lib/scoring";
+import { can } from "@/lib/rbac";
 import { Card, Badge, readinessTone } from "@/components/ui";
 import { clsx } from "@/lib/cx";
 import { Donut, LineTrend, Sparkline, GroupedBars, heatColor } from "@/components/charts";
@@ -56,7 +57,11 @@ const CAT_TONES = ["bg-brand-100 text-brand", "bg-amber-100 text-amber-600", "bg
 
 export default async function DashboardPage() {
   const profile = await requireProfile();
-  const rows = latestAnalyticsPerStory(await listReviewAnalytics(getDb(), profile.tenantId));
+  // Admins & project managers see the whole workspace; everyone else sees their own stories.
+  const teamView = can(profile.role, "view_team_dashboard");
+  const rows = latestAnalyticsPerStory(
+    await listReviewAnalytics(getDb(), profile.tenantId, teamView ? undefined : profile.id),
+  );
 
   const k = dashboardKpis(rows);
   const cats = categoryQuality(rows);
@@ -67,8 +72,6 @@ export default async function DashboardPage() {
   const tips = insights(rows);
   const storiesTop = rows.slice(0, 10);
 
-  const trendTone = k.trend === "Improving" ? "text-emerald-600" : k.trend === "Declining" ? "text-red-600" : "text-slate-600";
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -76,11 +79,17 @@ export default async function DashboardPage() {
           <h1 className="flex items-center gap-2 text-2xl font-bold text-ink">
             Requirements Quality Dashboard <SparklesIcon className="h-5 w-5 text-brand" />
           </h1>
-          <p className="mt-1 text-sm text-slate-500">Track story quality, AI dependency, and readiness across your workspace.</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Track story quality, AI dependency, and readiness{" "}
+            {teamView ? "across your workspace." : "for your own stories."}
+          </p>
         </div>
-        <Badge tone={k.trend === "Improving" ? "green" : k.trend === "Declining" ? "red" : "slate"}>
-          Quality trend: {k.trend}{k.trend !== "Stable" ? ` (${k.trendDelta > 0 ? "+" : ""}${k.trendDelta})` : ""}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge tone={teamView ? "brand" : "slate"}>{teamView ? "Workspace view" : "My stories"}</Badge>
+          <Badge tone={k.trend === "Improving" ? "green" : k.trend === "Declining" ? "red" : "slate"}>
+            Quality trend: {k.trend}{k.trend !== "Stable" ? ` (${k.trendDelta > 0 ? "+" : ""}${k.trendDelta})` : ""}
+          </Badge>
+        </div>
       </div>
 
       {rows.length === 0 ? (

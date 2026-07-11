@@ -10,6 +10,7 @@ import {
 import { reviewStory } from "@/lib/ai";
 import { buildReviewInsert } from "@/lib/review/record";
 import type { AIReview } from "@/lib/scoring";
+import { audit } from "@/lib/audit";
 
 export async function submitStoryForReviewAction(formData: FormData): Promise<void> {
   const profile = await requireCan("submit_review");
@@ -49,5 +50,6 @@ export async function submitStoryForReviewAction(formData: FormData): Promise<vo
     buildReviewInsert(review, previousFirst),
   );
   await setStoryStatus(db, profile.tenantId, storyId, "REVIEWED");
+  await audit(profile.tenantId, profile.id, "story.reviewed", "user_story", storyId, { score: review.overallScore });
   redirect(`/stories/${storyId}`);
 }

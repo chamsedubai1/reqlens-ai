@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db/client";
 import { requireProfile } from "@/lib/auth/guard";
-import { getStory, getLatestReviewForStory } from "@/lib/db/queries";
+import { getStory, listReviewsForStory } from "@/lib/db/queries";
 import { submitStoryForReviewAction } from "@/app/actions/review";
 import { ReviewSummary } from "@/components/ReviewSummary";
 import { PermissionGate } from "@/components/PermissionGate";
-import { Card, Badge, FormError, btnPrimary } from "@/components/ui";
+import { Card, Badge, FormError, btnPrimary, readinessTone } from "@/components/ui";
+import { clsx } from "@/lib/cx";
 import { SparklesIcon } from "@/components/icons";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -30,7 +31,8 @@ export default async function StoryDetailPage({
   const db = getDb();
   const story = await getStory(db, profile.tenantId, storyId);
   if (!story) notFound();
-  const review = await getLatestReviewForStory(db, profile.tenantId, storyId);
+  const reviews = await listReviewsForStory(db, profile.tenantId, storyId);
+  const review = reviews[0];
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -84,6 +86,28 @@ export default async function StoryDetailPage({
             Submit the story to get a quality score and concrete improvements.
           </p>
         </Card>
+      )}
+
+      {reviews.length > 1 && (
+        <div>
+          <h2 className="mb-3 text-lg font-semibold text-ink">Review history</h2>
+          <Card className="divide-y divide-slate-50">
+            {reviews.map((r, i) => (
+              <div key={r.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
+                <span className="text-xs text-slate-400">{r.createdAt.toISOString().slice(0, 16).replace("T", " ")}</span>
+                {i === 0 && <Badge tone="brand">Latest</Badge>}
+                <span className="ml-auto flex items-center gap-3">
+                  <span className="text-slate-500">first <span className="font-semibold text-slate-700">{r.firstSubmissionScore}</span></span>
+                  <span className="text-slate-500">final <span className="font-semibold text-slate-700">{r.finalScore}</span></span>
+                  <span className={clsx("font-medium", r.improvementGap > 0 ? "text-emerald-600" : "text-slate-500")}>
+                    {r.improvementGap > 0 ? `↑ ${r.improvementGap}` : r.improvementGap}
+                  </span>
+                  <Badge tone={readinessTone(r.readinessStatus)}>{r.readinessStatus}</Badge>
+                </span>
+              </div>
+            ))}
+          </Card>
+        </div>
       )}
     </div>
   );
