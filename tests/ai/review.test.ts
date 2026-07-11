@@ -16,16 +16,22 @@ const input: ReviewInput = {
 };
 
 describe("reviewStory", () => {
-  const original = process.env.OPENAI_API_KEY;
+  const LIVE_VARS = ["OPENAI_API_KEY", "AI_API_KEY", "AI_BASE_URL"] as const;
+  const original: Record<string, string | undefined> = {};
   beforeEach(() => {
-    delete process.env.OPENAI_API_KEY;
+    for (const v of LIVE_VARS) {
+      original[v] = process.env[v];
+      delete process.env[v];
+    }
   });
   afterEach(() => {
-    if (original === undefined) delete process.env.OPENAI_API_KEY;
-    else process.env.OPENAI_API_KEY = original;
+    for (const v of LIVE_VARS) {
+      if (original[v] === undefined) delete process.env[v];
+      else process.env[v] = original[v];
+    }
   });
 
-  it("uses the mock provider and returns a validated review when no key is set", async () => {
+  it("uses the mock provider and returns a validated review when nothing is configured", async () => {
     const review = await reviewStory(input);
     expect(() => validateAIReview(review)).not.toThrow();
     expect(review.overallScore).toBeGreaterThanOrEqual(0);

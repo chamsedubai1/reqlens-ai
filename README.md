@@ -9,14 +9,14 @@ Analyst's first-submission quality improves over time.
 - Email/password auth with multi-tenant isolation; first signup provisions a tenant + admin.
 - Projects, business domains, and reference documents (paste or `.txt`/`.md` upload).
 - Domain-aware AI story review with a 7-category quality score, readiness status, and improvements.
-- Runs with a deterministic mock reviewer when no OpenAI key is set (set `OPENAI_API_KEY` for live).
+- Pluggable AI reviewer — OpenAI or any OpenAI-compatible endpoint (e.g. self-hosted **Qwen** via Ollama/vLLM); a deterministic keyless mock runs when nothing is configured.
 - Personal KPI dashboard: avg first/final score, AI Dependency Index, ready-on-first rate, quality trend.
 - Role-based permissions (`TENANT_ADMIN`, `PROJECT_MANAGER`, `BA_PO`, `VIEWER`) enforced server-side.
 
 ## Tech Stack
 
 Next.js (App Router) · TypeScript · Tailwind CSS · self-hosted PostgreSQL · Drizzle ORM ·
-custom auth (bcrypt + jose) · OpenAI (optional) · Vitest · GitHub Actions · Hostinger (VPS).
+custom auth (bcrypt + jose) · OpenAI-compatible AI (OpenAI / Qwen, optional) · Vitest · GitHub Actions · Hostinger (VPS).
 
 ## Local Development
 
@@ -33,8 +33,28 @@ custom auth (bcrypt + jose) · OpenAI (optional) · Vitest · GitHub Actions · 
 | --- | --- | --- |
 | `DATABASE_URL` | yes | Postgres connection string. |
 | `SESSION_SECRET` | yes | >= 32 chars. `openssl rand -base64 48`. |
-| `OPENAI_API_KEY` | no | When unset, the deterministic mock reviewer is used. |
+| `AI_BASE_URL` | no | OpenAI-compatible endpoint for a self-hosted model (e.g. Qwen). |
+| `AI_MODEL` | no | Model name for that endpoint. |
+| `AI_API_KEY` | no | Key for the endpoint, if it requires one. |
+| `OPENAI_API_KEY` | no | Shortcut for using OpenAI directly. |
 | `OPENAI_MODEL` | no | Defaults to `gpt-4o-mini`. |
+
+### AI reviewer
+
+The story reviewer talks to **any OpenAI-compatible `/v1/chat/completions` endpoint**, so you
+can run an open model like **Qwen** instead of OpenAI. If none of the AI variables are set, the app
+uses a **deterministic keyless mock** reviewer (great for demos/CI).
+
+- **OpenAI:** set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`).
+- **Qwen via Ollama:** `AI_BASE_URL=http://localhost:11434/v1`, `AI_MODEL=qwen2.5:14b`
+  (run `ollama pull qwen2.5:14b`; `AI_API_KEY` not needed).
+- **Qwen via vLLM:** `AI_BASE_URL=http://localhost:8000/v1`,
+  `AI_MODEL=Qwen/Qwen2.5-14B-Instruct`, `AI_API_KEY=<your key if configured>`.
+- **Alibaba DashScope:** `AI_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1`,
+  `AI_MODEL=qwen-plus`, `AI_API_KEY=sk-...`.
+
+The reviewer requests JSON mode, retries without it if the server rejects the param, and robustly
+extracts the JSON object from the response (handles ```json fences that open models often add).
 
 ## Testing
 
@@ -59,7 +79,7 @@ app/
 lib/
   db/               Drizzle client, schema, queries
   auth/             Session handling, password hashing, current-user/guard helpers
-  ai/               OpenAI client, deterministic mock reviewer, prompt builder
+  ai/               OpenAI-compatible provider (OpenAI/Qwen), mock reviewer, prompt builder, JSON parser
   review/           Review persistence
   rbac.ts           Role-based permission checks
   scoring.ts        Story quality scoring model
