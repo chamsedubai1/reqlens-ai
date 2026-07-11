@@ -7,7 +7,11 @@ export interface StoryReviewRecord {
 
 export type QualityTrend = "Improving" | "Stable" | "Declining";
 
-export function totalStories(records: StoryReviewRecord[]): number {
+// Accepts any array (e.g. all of the user's stories, or just reviewed-story
+// records) — "Total stories created" per CLAUDE.md KPI #1 counts every story,
+// not only the ones that have been reviewed, so this is intentionally wider
+// than StoryReviewRecord[].
+export function totalStories(records: unknown[]): number {
   return records.length;
 }
 
@@ -68,4 +72,28 @@ export function mostCommonWeakness(
     }
   }
   return top;
+}
+
+export function latestReviewPerStory(
+  rows: {
+    storyId: string;
+    firstSubmissionScore: number;
+    finalScore: number;
+    weaknesses: string[];
+    createdAt: string;
+  }[],
+): StoryReviewRecord[] {
+  const byStory = new Map<string, (typeof rows)[number]>();
+  for (const row of rows) {
+    const current = byStory.get(row.storyId);
+    if (!current || row.createdAt > current.createdAt) {
+      byStory.set(row.storyId, row);
+    }
+  }
+  return [...byStory.values()].map((r) => ({
+    firstSubmissionScore: r.firstSubmissionScore,
+    finalScore: r.finalScore,
+    weaknesses: r.weaknesses,
+    createdAt: r.createdAt,
+  }));
 }

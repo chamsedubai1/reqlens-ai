@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, asc, desc } from "drizzle-orm";
 import type { Db } from "@/lib/db/client";
 import {
   tenants,
@@ -7,6 +7,7 @@ import {
   businessDomains,
   userStories,
   domainDocuments,
+  storyReviews,
 } from "@/lib/db/schema";
 
 export type UserProfile = typeof userProfiles.$inferSelect;
@@ -318,4 +319,93 @@ export async function listProcessedDocumentsByDomain(
         eq(domainDocuments.processingStatus, "PROCESSED"),
       ),
     );
+}
+
+import type { ReviewInsert } from "@/lib/review/record";
+
+export type StoryReview = typeof storyReviews.$inferSelect;
+export type KpiReviewRow = {
+  storyId: string;
+  firstSubmissionScore: number;
+  finalScore: number;
+  weaknesses: string[];
+  createdAt: string;
+};
+
+export async function createReview(
+  db: Db,
+  tenantId: string,
+  ctx: { storyId: string; projectId: string; domainId: string; userId: string },
+  insert: ReviewInsert,
+): Promise<StoryReview> {
+  const [row] = await db
+    .insert(storyReviews)
+    .values({ tenantId, ...ctx, ...insert })
+    .returning();
+  return row;
+}
+
+export async function getFirstReviewScoreForStory(
+  db: Db,
+  tenantId: string,
+  storyId: string,
+): Promise<number | null> {
+  const rows = await db
+    .select({ score: storyReviews.firstSubmissionScore })
+    .from(storyReviews)
+    .where(and(eq(storyReviews.tenantId, tenantId), eq(storyReviews.storyId, storyId)))
+    .orderBy(asc(storyReviews.createdAt))
+    .limit(1);
+  return rows[0]?.score ?? null;
+}
+
+export async function listReviewsForKpi(
+  db: Db,
+  tenantId: string,
+  userId: string,
+): Promise<KpiReviewRow[]> {
+  const rows = await db
+    .select({
+      storyId: storyReviews.storyId,
+      firstSubmissionScore: storyReviews.firstSubmissionScore,
+      finalScore: storyReviews.finalScore,
+      weaknesses: storyReviews.weaknesses,
+      createdAt: storyReviews.createdAt,
+    })
+    .from(storyReviews)
+    .where(and(eq(storyReviews.tenantId, tenantId), eq(storyReviews.userId, userId)))
+    .orderBy(desc(storyReviews.createdAt));
+  return rows.map((r) => ({
+    storyId: r.storyId,
+    firstSubmissionScore: r.firstSubmissionScore,
+    finalScore: r.finalScore,
+    weaknesses: Array.isArray(r.weaknesses) ? (r.weaknesses as string[]) : [],
+    createdAt: r.createdAt.toISOString(),
+  }));
+}
+
+export async function getLatestReviewForStory(
+  db: Db,
+  tenantId: string,
+  storyId: string,
+): Promise<StoryReview | undefined> {
+  const rows = await db
+    .select()
+    .from(storyReviews)
+    .where(and(eq(storyReviews.tenantId, tenantId), eq(storyReviews.storyId, storyId)))
+    .orderBy(desc(storyReviews.createdAt))
+    .limit(1);
+  return rows[0];
+}
+
+export async function setStoryStatus(
+  db: Db,
+  tenantId: string,
+  storyId: string,
+  status: string,
+): Promise<void> {
+  await db
+    .update(userStories)
+    .set({ status })
+    .where(and(eq(userStories.tenantId, tenantId), eq(userStories.id, storyId)));
 }
