@@ -3,41 +3,16 @@ import { getDb } from "@/lib/db/client";
 import { requireProfile } from "@/lib/auth/guard";
 import { listReviewAnalytics } from "@/lib/db/queries";
 import {
-  latestAnalyticsPerStory, dashboardKpis, categoryQuality, scoreDistribution,
+  latestAnalyticsPerStory, dashboardKpis, scoreDistribution,
   byProject, trendSeries, weaknessHeatmap, insights,
 } from "@/lib/analytics";
 import { readinessStatus } from "@/lib/scoring";
 import { can } from "@/lib/rbac";
 import { Card, Badge, readinessTone } from "@/components/ui";
 import { clsx } from "@/lib/cx";
-import { Donut, LineTrend, Sparkline, GroupedBars, heatColor } from "@/components/charts";
-import {
-  SparklesIcon, FileTextIcon, StarIcon, CheckCircleIcon, GaugeIcon, TargetIcon,
-  ShieldCheckIcon, TrendingUpIcon, LightbulbIcon,
-} from "@/components/icons";
-
-function Kpi({
-  Icon, tile, label, value, hint, children,
-}: {
-  Icon: (p: { className?: string }) => React.ReactNode;
-  tile: string;
-  label: string;
-  value: string;
-  hint?: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <Card className="p-4">
-      <div className="flex items-start justify-between">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</span>
-        <span className={clsx("flex h-8 w-8 items-center justify-center rounded-lg", tile)}><Icon className="h-4 w-4" /></span>
-      </div>
-      <div className="mt-2 text-2xl font-bold tracking-tight text-ink">{value}</div>
-      {hint && <div className="mt-0.5 text-[11px] text-slate-400">{hint}</div>}
-      {children}
-    </Card>
-  );
-}
+import { Donut, LineTrend, GroupedBars, heatColor } from "@/components/charts";
+import { DashboardKpis } from "@/components/dashboard/DashboardKpis";
+import { SparklesIcon, LightbulbIcon } from "@/components/icons";
 
 function Panel({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
   return (
@@ -53,8 +28,6 @@ function scorePill(score: number) {
   return <span className={clsx("inline-flex rounded-md px-2 py-0.5 text-xs font-semibold", tone)}>{score}</span>;
 }
 
-const CAT_TONES = ["bg-brand-100 text-brand", "bg-amber-100 text-amber-600", "bg-sky-100 text-sky-600", "bg-violet-100 text-violet-600", "bg-emerald-100 text-emerald-600", "bg-rose-100 text-rose-600"];
-
 export default async function DashboardPage() {
   const profile = await requireProfile();
   // Admins & project managers see the whole workspace; everyone else sees their own stories.
@@ -64,7 +37,6 @@ export default async function DashboardPage() {
   );
 
   const k = dashboardKpis(rows);
-  const cats = categoryQuality(rows);
   const dist = scoreDistribution(rows);
   const projects = byProject(rows);
   const trend = trendSeries(rows);
@@ -101,35 +73,8 @@ export default async function DashboardPage() {
         </Card>
       ) : (
         <>
-          {/* KPI row 1 */}
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-8">
-            <Kpi Icon={FileTextIcon} tile="bg-brand-100 text-brand" label="Total Stories" value={String(k.total)} />
-            <Kpi Icon={StarIcon} tile="bg-violet-100 text-violet-600" label="Avg First Score" value={String(k.avgFirst)} />
-            <Kpi Icon={CheckCircleIcon} tile="bg-emerald-100 text-emerald-600" label="Avg Final Score" value={String(k.avgFinal)} />
-            <Kpi Icon={GaugeIcon} tile="bg-amber-100 text-amber-600" label="AI Dependency" value={String(k.aiDependency)} hint="Lower is better" />
-            <Kpi Icon={CheckCircleIcon} tile="bg-sky-100 text-sky-600" label="Ready on First" value={`${k.readyOnFirstPct}%`} />
-            <Kpi Icon={TargetIcon} tile="bg-teal-100 text-teal-600" label="Sprint-Ready" value={`${k.sprintReadyPct}%`} />
-            <Kpi Icon={ShieldCheckIcon} tile="bg-indigo-100 text-indigo-600" label="Domain Alignment" value={String(k.avgDomainAlignment)} />
-            <Kpi Icon={TrendingUpIcon} tile="bg-brand-100 text-brand" label="Quality Trend" value={k.trend}>
-              <div className="mt-1"><Sparkline values={trend.map((t) => t.score)} /></div>
-            </Kpi>
-          </div>
-
-          {/* KPI row 2 — category quality */}
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
-            {cats.map((c, i) => (
-              <Card key={c.key} className="p-4">
-                <div className="flex items-start justify-between">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{c.label}</span>
-                  <span className={clsx("h-3 w-3 rounded-full", CAT_TONES[i % CAT_TONES.length])} />
-                </div>
-                <div className="mt-2 text-2xl font-bold text-ink">{c.pct}%</div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full rounded-full bg-brand" style={{ width: `${c.pct}%` }} />
-                </div>
-              </Card>
-            ))}
-          </div>
+          {/* KPI rows — click any card to drill into the stories behind it */}
+          <DashboardKpis rows={rows} />
 
           {/* Charts grid */}
           <div className="grid gap-5 lg:grid-cols-3">

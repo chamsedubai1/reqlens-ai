@@ -177,6 +177,80 @@ export function weaknessHeatmap(rows: AnalyticsRow[]): Heatmap {
   };
 }
 
+// --- KPI drill-down: given a KPI key, return the stories driving that metric ---
+
+export type DrillItem = {
+  storyId: string;
+  storyTitle: string;
+  projectName: string;
+  ownerName: string;
+  metric: string;
+};
+export type DrillResult = { title: string; metricLabel: string; note: string; items: DrillItem[] };
+
+const CAT_MAX: Record<string, number> = {
+  roleClarity: SCORE_WEIGHTS.roleClarity,
+  businessValue: SCORE_WEIGHTS.businessValue,
+  functionalClarity: SCORE_WEIGHTS.functionalClarity,
+  acceptanceCriteria: SCORE_WEIGHTS.acceptanceCriteria,
+  invest: SCORE_WEIGHTS.investCompliance,
+  edgeCases: SCORE_WEIGHTS.edgeCases,
+  testability: SCORE_WEIGHTS.testability,
+};
+const CAT_LABEL: Record<string, string> = {
+  acceptanceCriteria: "Acceptance Criteria",
+  businessValue: "Business Value",
+  edgeCases: "Edge Case Coverage",
+  testability: "Testability",
+  invest: "INVEST Compliance",
+  functionalClarity: "Functional Clarity",
+  roleClarity: "Role Clarity",
+};
+
+function toItem(r: AnalyticsRow, metric: string): DrillItem {
+  return { storyId: r.storyId, storyTitle: r.storyTitle, projectName: r.projectName, ownerName: r.ownerName, metric };
+}
+function sortBy(rows: AnalyticsRow[], f: (r: AnalyticsRow) => number, dir: "asc" | "desc" = "asc"): AnalyticsRow[] {
+  return [...rows].sort((a, b) => (dir === "asc" ? f(a) - f(b) : f(b) - f(a)));
+}
+
+export function drilldown(key: string, rows: AnalyticsRow[]): DrillResult {
+  if (key.startsWith("cat:")) {
+    const catKey = key.slice(4) as keyof AnalyticsRow["categories"];
+    const max = CAT_MAX[catKey] ?? 0;
+    return {
+      title: `${CAT_LABEL[catKey] ?? catKey} — by story`,
+      metricLabel: "Score",
+      note: "Lowest-scoring stories first — these drag the metric down.",
+      items: sortBy(rows, (r) => r.categories[catKey], "asc").map((r) => toItem(r, `${r.categories[catKey]}/${max}`)),
+    };
+  }
+  switch (key) {
+    case "total":
+      return { title: "All reviewed stories", metricLabel: "Reviewed", note: "Every story in this view, newest first.", items: sortBy(rows, (r) => Date.parse(r.createdAt), "desc").map((r) => toItem(r, r.createdAt.slice(0, 10))) };
+    case "avgFirst":
+      return { title: "First-submission scores", metricLabel: "First", note: "Lowest first submissions first.", items: sortBy(rows, (r) => r.firstScore).map((r) => toItem(r, String(r.firstScore))) };
+    case "avgFinal":
+      return { title: "Final scores", metricLabel: "Final", note: "Lowest final scores first.", items: sortBy(rows, (r) => r.finalScore).map((r) => toItem(r, String(r.finalScore))) };
+    case "aiDependency":
+      return { title: "AI improvement per story", metricLabel: "Improvement", note: "Biggest AI lift first (final − first).", items: sortBy(rows, (r) => r.finalScore - r.firstScore, "desc").map((r) => { const g = r.finalScore - r.firstScore; return toItem(r, g > 0 ? `+${g}` : String(g)); }) };
+    case "readyOnFirst": {
+      const ready = rows.filter((r) => r.firstScore >= 80);
+      return { title: "Ready on first submission", metricLabel: "First", note: ready.length ? "Stories with a first score ≥ 80." : "None reached ≥ 80 on first — closest shown.", items: sortBy(ready.length ? ready : rows, (r) => r.firstScore, "desc").map((r) => toItem(r, String(r.firstScore))) };
+    }
+    case "sprintReady": {
+      const rr = rows.filter((r) => r.finalScore >= 80);
+      return { title: "Sprint-ready stories", metricLabel: "Final", note: "Stories with a final score ≥ 80.", items: sortBy(rr.length ? rr : rows, (r) => r.finalScore, "desc").map((r) => toItem(r, String(r.finalScore))) };
+    }
+    case "domainAlignment":
+      return { title: "Domain alignment by story", metricLabel: "Alignment", note: "Lowest alignment first.", items: sortBy(rows, (r) => r.domainAlignment).map((r) => toItem(r, String(r.domainAlignment))) };
+    case "qualityTrend":
+      return { title: "First scores over time", metricLabel: "First", note: "Chronological — oldest to newest.", items: sortBy(rows, (r) => Date.parse(r.createdAt), "asc").map((r) => toItem(r, String(r.firstScore))) };
+    default:
+      return { title: "Stories", metricLabel: "Final", note: "", items: rows.map((r) => toItem(r, String(r.finalScore))) };
+  }
+}
+
 export function insights(rows: AnalyticsRow[]): string[] {
   if (rows.length === 0) return ["Create and review stories to see AI insights here."];
   const out: string[] = [];

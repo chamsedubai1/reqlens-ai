@@ -7,6 +7,7 @@ import {
   trendSeries,
   weaknessHeatmap,
   insights,
+  drilldown,
   type AnalyticsRow,
 } from "@/lib/analytics";
 
@@ -95,5 +96,33 @@ describe("categoryQuality / heatmap / trend / insights", () => {
   it("produces non-empty insights", () => {
     expect(insights(rows).length).toBeGreaterThan(0);
     expect(insights([])[0]).toContain("Create and review");
+  });
+});
+
+describe("drilldown", () => {
+  it("sprintReady lists only final>=80 stories", () => {
+    const d = drilldown("sprintReady", rows);
+    expect(d.items).toHaveLength(2); // final 90, 80
+    expect(d.items.every((i) => Number(i.metric) >= 80)).toBe(true);
+  });
+  it("avgFirst is sorted weakest-first with all stories", () => {
+    const d = drilldown("avgFirst", rows);
+    expect(d.items.map((i) => i.metric)).toEqual(["50", "60", "80"]);
+  });
+  it("aiDependency shows improvement, biggest first", () => {
+    const d = drilldown("aiDependency", rows);
+    expect(d.items[0].metric).toBe("+30"); // 90-60
+    expect(d.metricLabel).toBe("Improvement");
+  });
+  it("category drill (cat:acceptanceCriteria) reports score/max, weakest first", () => {
+    const d = drilldown("cat:acceptanceCriteria", rows);
+    expect(d.items[0].metric).toContain("/20");
+    expect(d.title).toContain("Acceptance Criteria");
+  });
+  it("readyOnFirst falls back to closest when none qualify", () => {
+    const low = rows.map((r) => ({ ...r, firstScore: 50 }));
+    const d = drilldown("readyOnFirst", low);
+    expect(d.items).toHaveLength(low.length);
+    expect(d.note).toContain("closest");
   });
 });
