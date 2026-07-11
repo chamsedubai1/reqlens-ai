@@ -26,6 +26,18 @@ export async function getUserProfileByEmail(
   return rows[0];
 }
 
+export async function getUserProfileById(
+  db: Db,
+  id: string,
+): Promise<UserProfile | undefined> {
+  const rows = await db
+    .select()
+    .from(userProfiles)
+    .where(eq(userProfiles.id, id))
+    .limit(1);
+  return rows[0];
+}
+
 // Creates a new tenant and its first user (TENANT_ADMIN) in one transaction.
 // tenant_id is generated server-side; never supplied by the client.
 export async function createUserWithTenant(
