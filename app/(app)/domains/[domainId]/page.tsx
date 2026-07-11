@@ -4,6 +4,8 @@ import { requireProfile } from "@/lib/auth/guard";
 import { getDomain, listDocumentsByDomain } from "@/lib/db/queries";
 import { createDocumentAction } from "@/app/actions/features";
 import { PermissionGate } from "@/components/PermissionGate";
+import { Card, PageHeader, FormError, Badge, inputClass, btnPrimary } from "@/components/ui";
+import { FileTextIcon } from "@/components/icons";
 
 export default async function DomainDetailPage({
   params,
@@ -21,35 +23,52 @@ export default async function DomainDetailPage({
   const docs = await listDocumentsByDomain(db, profile.tenantId, domainId);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">{domain.name}</h1>
-        {domain.description && <p className="text-slate-600">{domain.description}</p>}
-      </div>
-      {error && <p className="rounded-md bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
+    <div className="mx-auto max-w-4xl space-y-6">
+      <PageHeader title={domain.name} subtitle={domain.description ?? undefined} />
+      <FormError message={error} />
 
       <PermissionGate role={profile.role} action="upload_document">
-        <form action={createDocumentAction} encType="multipart/form-data" className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-          <input type="hidden" name="domainId" value={domainId} />
-          <input name="title" required placeholder="Document title" className="w-full rounded-md border border-slate-300 px-3 py-2" />
-          <textarea name="contentText" rows={4} placeholder="Paste reference text here..." className="w-full rounded-md border border-slate-300 px-3 py-2" />
-          <div className="text-sm text-slate-500">or upload a .txt / .md file:</div>
-          <input type="file" name="file" accept=".txt,.md" className="text-sm" />
-          <button type="submit" className="rounded-md bg-brand px-4 py-2 font-medium text-white hover:bg-brand-dark">Add document</button>
-        </form>
+        <Card className="p-5">
+          <h2 className="mb-4 text-sm font-semibold text-slate-700">Add a reference document</h2>
+          <form action={createDocumentAction} encType="multipart/form-data" className="space-y-3">
+            <input type="hidden" name="domainId" value={domainId} />
+            <input name="title" required placeholder="Document title" className={inputClass} />
+            <textarea name="contentText" rows={4} placeholder="Paste reference text here…" className={inputClass} />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <label className="text-sm text-slate-500">
+                or upload a{" "}
+                <span className="font-medium text-slate-700">.txt</span> /{" "}
+                <span className="font-medium text-slate-700">.md</span> file:{" "}
+                <input type="file" name="file" accept=".txt,.md" className="ml-1 text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-brand hover:file:bg-brand-100" />
+              </label>
+              <button type="submit" className={btnPrimary}>Add document</button>
+            </div>
+          </form>
+        </Card>
       </PermissionGate>
 
       <div>
-        <h2 className="mb-2 text-lg font-semibold text-slate-800">Reference Documents</h2>
-        <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
-          {docs.length === 0 && <li className="p-4 text-slate-500">No documents yet. The AI review will use general agile criteria only.</li>}
-          {docs.map((d) => (
-            <li key={d.id} className="p-4">
-              <div className="font-medium text-slate-900">{d.title}</div>
-              <div className="text-xs text-slate-500">{d.processingStatus}{d.fileName ? ` · ${d.fileName}` : ""}</div>
-            </li>
-          ))}
-        </ul>
+        <h2 className="mb-3 text-lg font-semibold text-ink">Reference Documents</h2>
+        {docs.length === 0 ? (
+          <Card className="p-8 text-center text-slate-500">
+            No documents yet. The AI review will use general agile criteria only.
+          </Card>
+        ) : (
+          <Card className="divide-y divide-slate-50">
+            {docs.map((d) => (
+              <div key={d.id} className="flex items-center gap-3 p-4">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand">
+                  <FileTextIcon className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium text-ink">{d.title}</div>
+                  {d.fileName && <div className="truncate text-xs text-slate-500">{d.fileName}</div>}
+                </div>
+                <Badge tone={d.processingStatus === "PROCESSED" ? "green" : "slate"}>{d.processingStatus}</Badge>
+              </div>
+            ))}
+          </Card>
+        )}
       </div>
     </div>
   );

@@ -1,7 +1,10 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db/client";
 import { requireProfile } from "@/lib/auth/guard";
 import { getProject, listStoriesByProject } from "@/lib/db/queries";
+import { Card, PageHeader, Badge, btnPrimary } from "@/components/ui";
+import { FileTextIcon, PlusIcon } from "@/components/icons";
 
 export default async function ProjectDetailPage({
   params,
@@ -16,22 +19,34 @@ export default async function ProjectDetailPage({
   const stories = await listStoriesByProject(db, profile.tenantId, projectId);
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
+      <PageHeader
+        title={project.name}
+        subtitle={project.description ?? undefined}
+        action={
+          <Link href="/stories/new" className={btnPrimary}>
+            <PlusIcon className="h-4 w-4" /> New Story
+          </Link>
+        }
+      />
+
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">{project.name}</h1>
-        {project.description && <p className="text-slate-600">{project.description}</p>}
-      </div>
-      <div>
-        <h2 className="mb-2 text-lg font-semibold text-slate-800">Stories</h2>
-        <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
-          {stories.length === 0 && <li className="p-4 text-slate-500">No stories in this project yet.</li>}
-          {stories.map((s) => (
-            <li key={s.id} className="p-4">
-              <a href={`/stories/${s.id}`} className="font-medium text-brand hover:underline">{s.title}</a>
-              <span className="ml-2 text-xs text-slate-500">{s.status}</span>
-            </li>
-          ))}
-        </ul>
+        <h2 className="mb-3 text-lg font-semibold text-ink">Stories</h2>
+        {stories.length === 0 ? (
+          <Card className="p-10 text-center text-slate-500">No stories in this project yet.</Card>
+        ) : (
+          <Card className="divide-y divide-slate-50">
+            {stories.map((s) => (
+              <Link key={s.id} href={`/stories/${s.id}`} className="flex items-center gap-3 p-4 transition hover:bg-slate-50/60">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                  <FileTextIcon className="h-4 w-4" />
+                </span>
+                <span className="flex-1 font-medium text-ink">{s.title}</span>
+                <Badge tone={s.status === "REVIEWED" ? "brand" : "slate"}>{s.status}</Badge>
+              </Link>
+            ))}
+          </Card>
+        )}
       </div>
     </div>
   );
