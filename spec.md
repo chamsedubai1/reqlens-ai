@@ -1,14 +1,14 @@
 # spec.md
 
-# StoryScore AI — MVP Functional Specification
+# ReqLens AI — MVP Functional Specification
 
 ## 1. Product Name
 
-StoryScore AI
+ReqLens AI
 
 ## 2. Product Description
 
-StoryScore AI is a multi-tenant AI-powered web application that reviews agile user stories and helps Business Analysts improve their story-writing quality.
+ReqLens AI is a multi-tenant AI-powered web application that reviews agile user stories and helps Business Analysts improve their story-writing quality.
 
 The platform scores user stories, identifies weaknesses, proposes improved versions, generates acceptance criteria, suggests business rules and edge cases, and measures whether the user’s first-submission quality improves over time.
 
@@ -307,7 +307,7 @@ Permission rules:
 
 # IMPLEMENTATION_PLAN.md
 
-# StoryScore AI — MVP Implementation Plan
+# ReqLens AI — MVP Implementation Plan
 
 ## Phase 1 — Project Setup
 
@@ -494,7 +494,7 @@ Add CI workflow and project documentation
 
 # DATA_MODEL.md
 
-# StoryScore AI — Data Model
+# ReqLens AI — Data Model
 
 ## 1. Entity Relationship Summary
 
@@ -692,7 +692,7 @@ Always derive `tenant_id` from the logged-in user profile.
 
 # RAG_REQUIREMENTS.md
 
-# StoryScore AI — Business Domain RAG Requirements
+# ReqLens AI — Business Domain RAG Requirements
 
 ## 1. Purpose
 
@@ -789,7 +789,7 @@ The AI output must include:
 
 # TEST_PLAN.md
 
-# StoryScore AI — MVP Test Plan
+# ReqLens AI — MVP Test Plan
 
 ## 1. Required Unit Tests
 
