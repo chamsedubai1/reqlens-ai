@@ -36,3 +36,17 @@ export const documentInputSchema = z.object({
   fileType: z.string().optional(),
 });
 export type DocumentInput = z.infer<typeof documentInputSchema>;
+
+export const authSignupSchema = z.object({
+  fullName: nonEmpty("Full name"),
+  tenantName: nonEmpty("Organization name"),
+  email: z.string().trim().email("A valid email is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+export type AuthSignupInput = z.infer<typeof authSignupSchema>;
+
+export const authLoginSchema = z.object({
+  email: z.string().trim().email("A valid email is required"),
+  password: z.string().min(1, "Password is required"),
+});
+export type AuthLoginInput = z.infer<typeof authLoginSchema>;
