@@ -69,3 +69,27 @@ export function mostCommonWeakness(
   }
   return top;
 }
+
+export function latestReviewPerStory(
+  rows: {
+    storyId: string;
+    firstSubmissionScore: number;
+    finalScore: number;
+    weaknesses: string[];
+    createdAt: string;
+  }[],
+): StoryReviewRecord[] {
+  const byStory = new Map<string, (typeof rows)[number]>();
+  for (const row of rows) {
+    const current = byStory.get(row.storyId);
+    if (!current || row.createdAt > current.createdAt) {
+      byStory.set(row.storyId, row);
+    }
+  }
+  return [...byStory.values()].map((r) => ({
+    firstSubmissionScore: r.firstSubmissionScore,
+    finalScore: r.finalScore,
+    weaknesses: r.weaknesses,
+    createdAt: r.createdAt,
+  }));
+}
