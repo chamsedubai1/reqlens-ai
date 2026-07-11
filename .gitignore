@@ -11,6 +11,12 @@ build/
 .env.local
 .env*.local
 
+# typescript build info
+*.tsbuildinfo
+
+# superpowers execution ledger/scratch
+.superpowers/
+
 # misc
 .DS_Store
 *.log
