@@ -10,6 +10,23 @@ Everything below runs **on the VPS over SSH**.
 
 ---
 
+## Quick start (automated) — recommended
+
+After pointing your domain (step 0) and connecting over SSH (as root):
+```bash
+apt update && apt install -y git
+git clone https://github.com/chamsedubai1/reqlens-ai.git
+cd reqlens-ai
+bash deploy/setup.sh your-domain.com        # installs everything, builds, starts
+```
+The script installs Node, PostgreSQL, nginx, PM2, and Ollama+Qwen; creates the
+database; builds the app; and starts it. When it finishes it prints two commands
+to enable HTTPS — run those, then open `https://your-domain.com`.
+
+The numbered steps below are the same thing done manually, for reference/debugging.
+
+---
+
 ## 0. Point your domain at the VPS
 In Hostinger's hPanel → your VPS, note its **IP address**. Then in hPanel → Domains →
 your domain → **DNS / Nameservers**, set/point DNS to the VPS:
