@@ -73,6 +73,26 @@ Load it into your shell for the migrate/build/start steps:
 set -a; . ./.env.production; set +a
 ```
 
+## 4b. Install Qwen via Ollama (self-hosted AI reviewer)
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+# Pull a Qwen model. On a CPU-only VPS use a small/quantized one:
+ollama pull qwen2.5:7b            # ~5-6 GB RAM (q4); good quality
+# ollama pull qwen2.5:3b          # lighter/faster if RAM is tight
+ollama list                       # confirm it's downloaded
+```
+Ollama runs as a systemd service on `127.0.0.1:11434` and exposes an
+OpenAI-compatible API at `/v1`. Set these in `.env.production`:
+```
+AI_BASE_URL=http://127.0.0.1:11434/v1
+AI_MODEL=qwen2.5:7b
+# AI_API_KEY not needed for local Ollama
+```
+> CPU inference is slow (tens of seconds per review) and RAM-hungry. If reviews
+> time out, either use a smaller model (`qwen2.5:3b`) or raise `proxy_read_timeout`
+> in the nginx config. Verify the endpoint works:
+> `curl http://127.0.0.1:11434/v1/models`
+
 ## 5. Migrate (and optionally seed demo data)
 ```bash
 npm run db:migrate
