@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { createStoryAction, createAndReviewStoryAction } from "@/app/actions/features";
+import { reviewStoryInlineAction } from "@/app/actions/features";
+import type { InlineReviewState } from "@/lib/review/inline";
+import { ReviewSummary } from "@/components/ReviewSummary";
 import { STORY_TEMPLATES } from "@/lib/story-templates";
 import { clsx } from "@/lib/cx";
 import {
@@ -38,6 +40,8 @@ const initial = {
   description: "", acceptanceCriteria: "", businessRules: "", edgeCases: "",
 };
 
+const asList = (v: unknown): string[] => (Array.isArray(v) ? (v as string[]) : []);
+
 function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
     <span className="text-sm font-semibold text-slate-700">
@@ -57,6 +61,23 @@ export function NewStoryView({
 }) {
   const [form, setForm] = useState<Record<string, string>>(initial);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [state, formAction, isPending] = useActionState<InlineReviewState | null, FormData>(
+    reviewStoryInlineAction,
+    null,
+  );
+  // Which button was pressed, so we can label the right one "Analyzing…"/"Saving…".
+  const [submitIntent, setSubmitIntent] = useState<"save" | "review" | null>(null);
+  useEffect(() => {
+    if (!isPending) setSubmitIntent(null);
+  }, [isPending]);
+
+  const formTopRef = useRef<HTMLDivElement>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
+  // When a fresh review lands, scroll it into view so the user sees the result.
+  useEffect(() => {
+    if (state?.review) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [state?.review]);
+
   const bind = (name: keyof typeof initial) => ({
     name,
     value: form[name] ?? "",
@@ -67,11 +88,27 @@ export function NewStoryView({
     setForm((f) => ({ ...f, ...fields }));
     setTemplatesOpen(false);
   };
+  const applySuggestions = () => {
+    const r = state?.review;
+    if (!r) return;
+    const ac = asList(r.improvedAcceptanceCriteria);
+    const br = asList(r.suggestedBusinessRules);
+    const ec = asList(r.suggestedEdgeCases);
+    setForm((f) => ({
+      ...f,
+      acceptanceCriteria: ac.length ? ac.map((s) => `- ${s}`).join("\n") : f.acceptanceCriteria,
+      businessRules: br.length ? br.map((s) => `- ${s}`).join("\n") : f.businessRules,
+      edgeCases: ec.length ? ec.map((s) => `- ${s}`).join("\n") : f.edgeCases,
+    }));
+    formTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const missingSetup = projects.length === 0 || domains.length === 0;
+  const banner = state?.error ?? error;
+  const savedOk = state?.ok && state?.mode === "saved";
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div ref={formTopRef} className="mx-auto max-w-6xl">
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-3">
@@ -96,8 +133,16 @@ export function NewStoryView({
         </button>
       </div>
 
-      {error && (
-        <p className="mb-6 rounded-lg border border-red-100 bg-red-50 px-4 py-2.5 text-sm text-red-700">{error}</p>
+      {banner && (
+        <p className="mb-6 rounded-lg border border-red-100 bg-red-50 px-4 py-2.5 text-sm text-red-700">{banner}</p>
+      )}
+      {savedOk && (
+        <p className="mb-6 flex flex-wrap items-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
+          <CheckCircleIcon className="h-4 w-4" /> Draft saved{state?.storyRef ? ` as ${state.storyRef}` : ""}.
+          {state?.storyId && (
+            <Link href={`/stories/${state.storyId}`} className="font-semibold underline">Open full story →</Link>
+          )}
+        </p>
       )}
       {missingSetup && (
         <div className="mb-6 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -108,7 +153,9 @@ export function NewStoryView({
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Form */}
-        <form action={createStoryAction} className="space-y-6 lg:col-span-2">
+        <form action={formAction} className="space-y-6 lg:col-span-2">
+          {/* Re-review the same story after edits instead of creating duplicates. */}
+          <input type="hidden" name="storyId" value={state?.storyId ?? ""} />
           {/* Basic Information */}
           <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
             <div className="mb-5 flex items-center gap-3">
@@ -204,15 +251,39 @@ export function NewStoryView({
             </label>
           </section>
 
+          {/* Analyzing banner (AI can take a while on a self-hosted model) */}
+          {isPending && submitIntent === "review" && (
+            <div className="flex items-center gap-3 rounded-xl border border-brand/20 bg-brand-50 px-4 py-3 text-sm text-brand">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
+              Analyzing your story with AI… this can take up to a minute the first time.
+            </div>
+          )}
+
           {/* Footer actions */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Link href="/dashboard" className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</Link>
             <div className="flex gap-3">
-              <button type="submit" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                <FileTextIcon className="h-4 w-4" /> Save Draft
+              <button
+                type="submit"
+                name="intent"
+                value="save"
+                disabled={isPending}
+                onClick={() => setSubmitIntent("save")}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                <FileTextIcon className="h-4 w-4" /> {isPending && submitIntent === "save" ? "Saving…" : "Save Draft"}
               </button>
-              <button type="submit" formAction={createAndReviewStoryAction} className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand/25 hover:bg-brand-dark">
-                <SparklesIcon className="h-4 w-4" /> Review with AI
+              <button
+                type="submit"
+                name="intent"
+                value="review"
+                disabled={isPending}
+                onClick={() => setSubmitIntent("review")}
+                className="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand/25 hover:bg-brand-dark disabled:opacity-60"
+              >
+                {isPending && submitIntent === "review"
+                  ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> Analyzing…</>
+                  : <><SparklesIcon className="h-4 w-4" /> {state?.review ? "Re-run AI review" : "Review with AI"}</>}
               </button>
             </div>
           </div>
@@ -263,6 +334,39 @@ export function NewStoryView({
           </div>
         </aside>
       </div>
+
+      {/* Inline AI assessment */}
+      {state?.review && (
+        <section ref={resultRef} className="mt-10 scroll-mt-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="flex items-center gap-2 text-xl font-bold text-ink">
+              <SparklesIcon className="h-5 w-5 text-brand" /> AI Assessment
+              {state.storyRef && <span className="font-mono text-xs font-semibold text-slate-400">{state.storyRef}</span>}
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={applySuggestions}
+                className="inline-flex items-center gap-2 rounded-xl border border-brand/20 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand hover:bg-brand-100"
+              >
+                <SparklesIcon className="h-4 w-4" /> Apply AI suggestions to form
+              </button>
+              {state.storyId && (
+                <Link
+                  href={`/stories/${state.storyId}`}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Open full story →
+                </Link>
+              )}
+            </div>
+          </div>
+          <p className="mb-4 text-sm text-slate-500">
+            Refine the fields above using these suggestions, then press <span className="font-semibold text-slate-700">Re-run AI review</span> to see your score improve.
+          </p>
+          <ReviewSummary review={state.review} />
+        </section>
+      )}
 
       {/* Templates modal */}
       {templatesOpen && (

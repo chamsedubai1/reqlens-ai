@@ -8,6 +8,10 @@ import {
   createDomain,
   createDocument,
   createStory,
+  updateStory,
+  getStory,
+  getProject,
+  listReviewsForStory,
 } from "@/lib/db/queries";
 import {
   projectInputSchema,
@@ -16,6 +20,8 @@ import {
   storyInputSchema,
 } from "@/lib/validation";
 import { reviewAndPersistStory } from "@/lib/review/run";
+import { storyRef } from "@/lib/story-ref";
+import type { InlineReviewState } from "@/lib/review/inline";
 import { audit } from "@/lib/audit";
 
 function parseStory(formData: FormData) {
@@ -129,4 +135,55 @@ export async function createAndReviewStoryAction(formData: FormData): Promise<vo
     );
   }
   redirect(`/stories/${story.id}`);
+}
+
+// Inline variant used by the New Story page: creates (or updates, on re-review)
+// the story, optionally runs the AI review, and RETURNS the result to render in
+// place — no redirect. Signature matches React's useActionState.
+export async function reviewStoryInlineAction(
+  _prev: InlineReviewState | null,
+  formData: FormData,
+): Promise<InlineReviewState> {
+  const profile = await requireCan("create_story");
+  const parsed = parseStory(formData);
+  if (!parsed.success) {
+    return { ok: false, error: "Please fill in all required fields." };
+  }
+
+  const db = getDb();
+  const intent = String(formData.get("intent") ?? "review");
+  const existingId = String(formData.get("storyId") ?? "").trim();
+
+  let story;
+  if (existingId && (await getStory(db, profile.tenantId, existingId))) {
+    story = await updateStory(db, profile.tenantId, existingId, parsed.data);
+    await audit(profile.tenantId, profile.id, "story.updated", "user_story", existingId, { title: parsed.data.title });
+  } else {
+    story = await createStory(db, profile.tenantId, profile.id, parsed.data);
+    await audit(profile.tenantId, profile.id, "story.created", "user_story", story.id, { title: story.title });
+  }
+  if (!story) return { ok: false, error: "Could not save the story. Please try again." };
+
+  const project = await getProject(db, profile.tenantId, story.projectId);
+  const ref = storyRef(story.reference, story.id, project?.name);
+
+  if (intent !== "review") {
+    return { ok: true, mode: "saved", storyId: story.id, storyRef: ref };
+  }
+
+  try {
+    await reviewAndPersistStory(db, profile.tenantId, profile.id, story.id);
+    await audit(profile.tenantId, profile.id, "story.reviewed", "user_story", story.id, {});
+  } catch {
+    return {
+      ok: false,
+      mode: "saved",
+      storyId: story.id,
+      storyRef: ref,
+      error: "Story saved, but the AI review could not be completed. Please try again in a moment.",
+    };
+  }
+
+  const reviews = await listReviewsForStory(db, profile.tenantId, story.id);
+  return { ok: true, mode: "reviewed", storyId: story.id, storyRef: ref, review: reviews[0] };
 }

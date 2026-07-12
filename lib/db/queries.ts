@@ -379,6 +379,51 @@ export async function createStory(
   return row;
 }
 
+// Updates an existing story's fields (tenant-scoped). Used when a story is
+// re-reviewed after inline edits, so we amend the same story rather than create a
+// duplicate. Verifies the (possibly changed) project/domain belong to the tenant.
+export async function updateStory(
+  db: Db,
+  tenantId: string,
+  storyId: string,
+  input: StoryRow,
+): Promise<UserStory | undefined> {
+  const project = await db
+    .select({ id: projects.id })
+    .from(projects)
+    .where(and(eq(projects.id, input.projectId), eq(projects.tenantId, tenantId)))
+    .limit(1);
+  if (project.length === 0) {
+    throw new Error("Project does not belong to this tenant");
+  }
+  const domain = await db
+    .select({ id: businessDomains.id })
+    .from(businessDomains)
+    .where(and(eq(businessDomains.id, input.domainId), eq(businessDomains.tenantId, tenantId)))
+    .limit(1);
+  if (domain.length === 0) {
+    throw new Error("Business domain does not belong to this tenant");
+  }
+
+  const [row] = await db
+    .update(userStories)
+    .set({
+      projectId: input.projectId,
+      domainId: input.domainId,
+      title: input.title,
+      userRole: input.userRole,
+      goal: input.goal,
+      businessValue: input.businessValue,
+      description: input.description,
+      acceptanceCriteria: input.acceptanceCriteria ?? null,
+      businessRules: input.businessRules ?? null,
+      edgeCases: input.edgeCases ?? null,
+    })
+    .where(and(eq(userStories.id, storyId), eq(userStories.tenantId, tenantId)))
+    .returning();
+  return row;
+}
+
 export async function listStoriesByUser(
   db: Db,
   tenantId: string,
