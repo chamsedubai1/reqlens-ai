@@ -8,6 +8,13 @@ still use your existing domain (below).
 
 Everything below runs **on the VPS over SSH**.
 
+> **Already running a Traefik/Docker reverse proxy on the VPS** (e.g. the box also
+> hosts n8n, Coolify, or other Dockerized apps that own ports 80/443)? Don't use the
+> nginx + certbot steps here — follow **[`traefik/README.md`](traefik/README.md)**
+> instead: run the app on the host with PM2 (steps 1–6 below), then add one small
+> proxy container that your existing Traefik routes to. This is how `reqlensai.com`
+> is deployed.
+
 ---
 
 ## Quick start (automated) — recommended

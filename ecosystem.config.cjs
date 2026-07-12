@@ -25,7 +25,12 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: "3000",
-        HOSTNAME: "127.0.0.1",
+        // Interface the Next server binds to. Default localhost (nginx on the same
+        // host proxies to it). When routing through a Traefik *container*, set
+        // APP_HOST to that Docker network's gateway (e.g. 172.18.0.1) so the proxy
+        // container can reach it while it stays off the public internet.
+        // See deploy/traefik/README.md.
+        HOSTNAME: process.env.APP_HOST || "127.0.0.1",
         ...pick(["DATABASE_URL", "SESSION_SECRET", "AI_BASE_URL", "AI_MODEL", "AI_API_KEY"]),
       },
     },
