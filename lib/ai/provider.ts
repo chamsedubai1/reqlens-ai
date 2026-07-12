@@ -36,11 +36,18 @@ export async function providerReview(input: ReviewInput): Promise<unknown> {
     ],
   };
 
+  // Bound the whole call so a slow/overloaded self-hosted model (CPU inference can
+  // take minutes) aborts instead of hanging past the reverse-proxy timeout. On
+  // abort the fetch rejects and the caller falls back to the deterministic reviewer.
+  const timeoutMs = Number(process.env.AI_TIMEOUT_MS ?? 90_000);
+  const signal = AbortSignal.timeout(timeoutMs);
+
   const send = (jsonMode: boolean) =>
     fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
       headers,
       body: JSON.stringify(jsonMode ? { ...base, response_format: { type: "json_object" } } : base),
+      signal,
     });
 
   // Try native JSON mode first (OpenAI/vLLM support it); some servers reject the
