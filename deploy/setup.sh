@@ -92,21 +92,24 @@ pm2 save
 pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || pm2 startup >/dev/null 2>&1 || true
 
 echo ">>> [8/8] Configuring nginx for ${DOMAIN}..."
-sed "s/YOUR_DOMAIN/${DOMAIN}/g" deploy/nginx-reqlens.conf > /etc/nginx/sites-available/reqlens
+# Normalise to the apex domain so server_name covers both apex and www.
+APEX="${DOMAIN#www.}"
+sed "s/YOUR_DOMAIN/${APEX}/g" deploy/nginx-reqlens.conf > /etc/nginx/sites-available/reqlens
 ln -sf /etc/nginx/sites-available/reqlens /etc/nginx/sites-enabled/reqlens
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
-systemctl reload nginx
+systemctl enable nginx
+systemctl restart nginx   # start it if it isn't running, otherwise apply the config
 
 cat <<DONE
 
 ==================================================================
- ReqLens AI is running behind nginx on http://${DOMAIN}
+ ReqLens AI is running behind nginx on http://${APEX}
 
  FINAL STEP — turn on HTTPS (logins REQUIRE it), run these two:
 
    apt-get install -y certbot python3-certbot-nginx
-   certbot --nginx -d ${DOMAIN} -d www.${DOMAIN}
+   certbot --nginx -d ${APEX} -d www.${APEX}
 
  Then open:  https://${DOMAIN}   and click "Sign up" to create
  your admin account.
