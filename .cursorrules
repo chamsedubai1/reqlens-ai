@@ -1,0 +1,44 @@
+# ReqLens AI — Cursor / AI-assistant rules
+
+ReqLens AI is a multi-tenant, AI-powered web app that scores and improves agile user
+stories. Follow these rules for every change. They mirror CLAUDE.md; see docs/PRD.md
+and docs/ARCHITECTURE.md for product and technical specs.
+
+## Stack (do not swap without reason)
+- Next.js (App Router, Server Components + Server Actions), TypeScript, Tailwind CSS.
+- PostgreSQL via Drizzle ORM (node-postgres); PGlite for tests.
+- Custom auth: bcryptjs password hashing + jose HS256 JWT in an httpOnly cookie.
+- AI: OpenAI-compatible endpoint (self-hosted Qwen via Ollama by default); deterministic fallback.
+- Testing: Vitest. CI: GitHub Actions. Deploy: standalone build + PM2 behind a reverse proxy.
+
+## Architecture
+- Keep business logic in `/lib` (auth, permissions, scoring, KPIs, AI, validation); keep it framework-independent and unit-testable.
+- Data access lives in `lib/db`; every query is tenant-scoped.
+- Mutations go through Server Actions in `app/actions`; UI never calls the DB or AI directly.
+- Components small and focused; Server Components for data, client components for interaction.
+
+## Multi-tenancy & security (non-negotiable)
+- Every tenant-owned table has `tenant_id`. NEVER trust a `tenant_id` from the client;
+  always derive it from the authenticated session profile.
+- A user must never access another tenant's projects, stories, reviews, domains, documents, or KPIs.
+- Enforce role-based permissions server-side (requireCan) before every mutating action; the UI only hides controls.
+- Keep AI calls and API keys server-side; never expose secrets to the browser. Never commit `.env*`.
+
+## AI review
+- Validate user input (Zod) before any AI call.
+- The AI must return the JSON contract in docs/ARCHITECTURE.md §3; validate it (aiReviewSchema) before persisting — never store an unvalidated review.
+- Handle AI errors gracefully: the call is time-bounded (AI_TIMEOUT_MS) and falls back to the deterministic reviewer so a review always returns.
+- Scoring weights sum to 100 (roleClarity 10, businessValue 15, functionalClarity 15, acceptanceCriteria 20, investCompliance 20, edgeCases 10, testability 10). Readiness: ≥90 Excellent, ≥80 Ready, ≥65 Needs Improvement, else Not Ready.
+
+## Code quality
+- TypeScript everywhere; avoid `any` unless justified.
+- Clear, descriptive names for files and functions.
+- Validate input before writes; return actionable errors.
+- Add or update Vitest tests for new logic (validation, scoring/KPIs, permissions, tenant isolation).
+- Run typecheck, lint, and tests before considering a change done.
+- Do NOT run `npm run build` while the dev server is running (Windows `.next` lock conflicts).
+
+## Scope discipline (MVP)
+- Build only what the spec requires. Out of scope: Jira/Azure DevOps integration, payments,
+  enterprise SSO, complex approval workflows, PDF parsing, full vector-DB RAG, multi-org membership, billing/marketplace.
+- RAG is "RAG-lite": include the latest domain documents in the prompt; leave a TODO where vector search would slot in.
