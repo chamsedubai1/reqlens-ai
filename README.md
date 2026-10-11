@@ -184,6 +184,11 @@ Guide itself. A known weak spot is comparing the whitepaper's Scrum with the 202
 second half of that comparison table has no heading in its chunk, so it is rarely retrieved.
 Checks are transparent regexes, not an LLM judge, so read the transcripts for the final word.
 
+**Live site:** `npm run rag:eval -- --url https://reqlensai.com` on 10 of the questions: 9/10,
+median first word 3.1 s, answers streamed through Traefik and nginx
+([eval/results/live/latest.md](eval/results/live/latest.md)). The miss was the false premise:
+the p. 9 passage was retrieved but overlooked.
+
 ### Hybrid retrieval (stretch goal 2)
 
 See the table above: Postgres full-text search with BM25-style weighting fused with vector

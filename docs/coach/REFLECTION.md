@@ -25,10 +25,10 @@ showed correct passages ranked 7th to 9th.
 **What it does well: it knows where its knowledge ends.** On a 55-question eval it scores 52/55
 in two consecutive runs. It says "the documents don't cover that" for Jira set-up and PMBOK
 earned value instead of answering from general knowledge, attributes disagreements (2004-era
-30-day sprints and the "three questions" vs the 2020 Scrum Guide), and corrects a false premise:
-asked why Cohn recommends numbering story cards, it quotes p. 9, "Do not number the cards."
-That only worked after I added keyword search; the embeddings alone never surfaced a line buried
-in a list of thirteen habits.
+30-day sprints and the "three questions" vs the 2020 Scrum Guide), and never invents an answer
+to a false premise. Asked why Cohn recommends numbering story cards, it usually quotes p. 9, "Do
+not number the cards", but only since I added keyword search: embeddings alone never surfaced a
+line buried in a list of thirteen habits. On the live site, 9 of 10 test questions passed.
 
 **What it does badly: facts buried in long passages, and whole-document questions.** "Who has
 the final say on priorities?" gets a sensible Scrum answer (the Product Owner) but misses the
