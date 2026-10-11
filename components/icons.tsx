@@ -100,3 +100,18 @@ export const BookOpenIcon = (p: IconProps) => (
 export const InfoIcon = (p: IconProps) => (
   <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" /></Svg>
 );
+export const MessageCircleIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.9-.9L3 21l1.9-5.6a8.4 8.4 0 0 1-.9-3.9A8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z" /></Svg>
+);
+export const SearchIcon = (p: IconProps) => (
+  <Svg {...p}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></Svg>
+);
+export const SendIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M22 2L11 13" /><path d="M22 2l-7 20-4-9-9-4 20-7z" /></Svg>
+);
+export const StopIcon = (p: IconProps) => (
+  <Svg {...p}><rect x="6" y="6" width="12" height="12" rx="2" /></Svg>
+);
+export const RefreshIcon = (p: IconProps) => (
+  <Svg {...p}><path d="M21 12a9 9 0 1 1-2.6-6.4" /><path d="M21 3v6h-6" /></Svg>
+);

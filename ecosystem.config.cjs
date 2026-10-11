@@ -21,7 +21,8 @@ module.exports = {
       instances: 1,
       exec_mode: "fork",
       autorestart: true,
-      max_memory_restart: "512M",
+      // The Coach's local embedding model adds ~100-150 MB to the process.
+      max_memory_restart: "768M",
       env: {
         NODE_ENV: "production",
         PORT: "3000",
@@ -31,7 +32,15 @@ module.exports = {
         // container can reach it while it stays off the public internet.
         // See deploy/traefik/README.md.
         HOSTNAME: process.env.APP_HOST || "127.0.0.1",
-        ...pick(["DATABASE_URL", "SESSION_SECRET", "AI_BASE_URL", "AI_MODEL", "AI_API_KEY"]),
+        // The standalone server chdirs into .next/standalone, which every build
+        // wipes; keep the Coach's embedding model cache at the repo root instead.
+        RAG_MODEL_CACHE: process.env.RAG_MODEL_CACHE || `${__dirname}/.cache/models`,
+        ...pick([
+          "DATABASE_URL", "SESSION_SECRET", "AI_BASE_URL", "AI_MODEL", "AI_API_KEY",
+          // ReqLens Coach
+          "ANTHROPIC_API_KEY", "COACH_MODEL", "COACH_RATE_LIMIT", "COACH_PROXY_HOPS",
+          "RAG_TOP_K", "RAG_MIN_SIMILARITY",
+        ]),
       },
     },
   ],

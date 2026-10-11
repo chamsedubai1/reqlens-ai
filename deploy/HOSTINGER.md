@@ -156,9 +156,43 @@ git pull
 npm ci
 set -a; . ./.env.production; set +a
 npm run db:migrate          # applies any new migrations
+npm run rag:ingest          # only if the PDFs in data/ changed
 npm run build:standalone
 pm2 restart reqlens
 ```
+
+## 9. Enable ReqLens Coach (`/coach`, document Q&A)
+
+The Coach is a public RAG chat over the PDFs in `data/`. It needs the **pgvector**
+extension, an Anthropic API key, and a one-time indexing run.
+
+```bash
+# 1. pgvector (once). Match the package to your Postgres major version:
+sudo -u postgres psql -tAc 'SHOW server_version'        # e.g. 16.x -> postgresql-16-pgvector
+sudo apt -y install postgresql-16-pgvector
+sudo -u postgres psql -d reqlens -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
+# 2. Keys in .env.production (server-only, never NEXT_PUBLIC_):
+#    ANTHROPIC_API_KEY=sk-ant-...      # Claude writes the answers
+#    COACH_PROXY_HOPS=2                # only if you use the Traefik -> nginx path
+#    (Embeddings run locally; the first ingest downloads the ~35 MB model into
+#    ./.cache/models, so the VPS needs outbound HTTPS to huggingface.co once.)
+cd /var/www/reqlens-ai
+set -a; . ./.env.production; set +a
+
+# 3. Create the table, index the PDFs, restart
+npm run db:migrate
+npm run rag:ingest                  # prints pages -> chunks per document
+pm2 restart reqlens --update-env
+```
+
+Check it: open `https://your-domain.com/coach` in a private window, ask a question,
+and confirm the answer streams in word by word with sources underneath. If the
+whole answer appears at once, a proxy is buffering — the route sends
+`X-Accel-Buffering: no`, which nginx honours; check any other proxy in front.
+
+Re-run `npm run rag:ingest` whenever the PDFs in `data/` change (it replaces each
+document's chunks and removes documents that were deleted).
 
 ---
 

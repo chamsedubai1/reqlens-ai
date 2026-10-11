@@ -66,6 +66,11 @@ END \$\$;
 GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};
 SQL
 sudo -u postgres psql -d "${DB_NAME}" -c "GRANT ALL ON SCHEMA public TO ${DB_USER};"
+# pgvector for the ReqLens Coach knowledge base (rag_chunks). The extension must be
+# created by a superuser; the app's migration then finds it already installed.
+PG_MAJOR="$(sudo -u postgres psql -tAc 'SHOW server_version_num' | cut -c1-2)"
+apt-get install -y "postgresql-${PG_MAJOR}-pgvector"
+sudo -u postgres psql -d "${DB_NAME}" -c "CREATE EXTENSION IF NOT EXISTS vector;"
 
 echo ">>> [5/8] Writing .env.production..."
 SECRET="$(openssl rand -base64 48)"

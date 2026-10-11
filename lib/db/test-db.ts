@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { vector } from "@electric-sql/pglite/vector";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import * as schema from "@/lib/db/schema";
@@ -10,7 +11,7 @@ export async function createTestDb(): Promise<{
   db: PgliteDatabase<typeof schema>;
   close: () => Promise<void>;
 }> {
-  const client = new PGlite();
+  const client = new PGlite({ extensions: { vector } }); // pgvector for rag_chunks
   const db = drizzle(client, { schema });
   await migrate(db, { migrationsFolder: "./db/migrations" });
   return {

@@ -9,6 +9,7 @@ import {
   PlusIcon,
   LayersIcon,
   ShieldCheckIcon,
+  MessageCircleIcon,
 } from "@/components/icons";
 
 const NAV = [
@@ -16,6 +17,7 @@ const NAV = [
   { href: "/projects", label: "Projects", Icon: FolderIcon },
   { href: "/stories/new", label: "New Story", Icon: PlusIcon },
   { href: "/domains", label: "Business Domains", Icon: LayersIcon },
+  { href: "/coach", label: "Coach", Icon: MessageCircleIcon },
 ];
 
 const ADMIN_NAV = { href: "/admin", label: "Admin", Icon: ShieldCheckIcon };

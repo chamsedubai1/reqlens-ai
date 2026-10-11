@@ -15,6 +15,13 @@
       "when": 1783762136479,
       "tag": "0001_fresh_otto_octavius",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791697163289,
+      "tag": "0002_rag_chunks",
+      "breakpoints": true
     }
   ]
 }

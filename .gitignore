@@ -20,3 +20,6 @@ build/
 # misc
 .DS_Store
 *.log
+
+# local embedding model cache (Coach)
+.cache/

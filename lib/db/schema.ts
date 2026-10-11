@@ -6,7 +6,11 @@ import {
   integer,
   timestamp,
   jsonb,
+  vector,
+  index,
+  customType,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const userRole = pgEnum("user_role", [
   "TENANT_ADMIN",
@@ -162,3 +166,32 @@ export const auditLogs = pgTable("audit_logs", {
   metadata: jsonb("metadata"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// ReqLens Coach knowledge base: one row per chunk of an indexed corpus document
+// (PDFs in data/, loaded by `npm run rag:ingest`). Not tenant-scoped — the corpus
+// is public reference material served to anyone on /coach.
+export const RAG_EMBEDDING_DIMENSIONS = 384; // bge-small-en-v1.5, see lib/rag/embed.ts
+
+const tsvector = customType<{ data: string }>({ dataType: () => "tsvector" });
+
+export const ragChunks = pgTable(
+  "rag_chunks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    source: text("source").notNull(), // file name, e.g. "guide.pdf"
+    title: text("title").notNull(), // human-readable document title
+    chunkIndex: integer("chunk_index").notNull(),
+    pageStart: integer("page_start").notNull(), // 1-indexed
+    pageEnd: integer("page_end").notNull(),
+    content: text("content").notNull(),
+    embedding: vector("embedding", { dimensions: RAG_EMBEDDING_DIMENSIONS }).notNull(),
+    // Keyword side of hybrid retrieval: English full-text vector kept in sync by Postgres.
+    contentTsv: tsvector("content_tsv").generatedAlwaysAs(sql`to_tsvector('english', "content")`),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("rag_chunks_embedding_idx").using("hnsw", t.embedding.op("vector_cosine_ops")),
+    index("rag_chunks_source_idx").on(t.source),
+    index("rag_chunks_content_tsv_idx").using("gin", t.contentTsv),
+  ],
+);

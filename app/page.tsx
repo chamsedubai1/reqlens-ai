@@ -35,6 +35,9 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Logo size="sm" />
           <nav className="flex items-center gap-2">
+            <Link href="/coach" className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900">
+              Coach
+            </Link>
             <Link href="/login" className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900">
               Log in
             </Link>
